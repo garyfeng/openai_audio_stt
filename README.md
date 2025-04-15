@@ -1,7 +1,7 @@
 ## OpenAI Audio STT
 
 **Author:** lysonober
-**Version:** 0.0.3
+**Version:** 0.0.4
 **Type:** Tool
 
 ### Description
