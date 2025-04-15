@@ -1,8 +1,8 @@
-## openai_audio_stt
+## OpenAI Audio STT
 
-**Author:** logicober
-**Version:** 0.0.1
-**Type:** extension
+**Author:** lysonober
+**Version:** 0.0.3
+**Type:** Tool
 
 ### Description
 
@@ -26,17 +26,17 @@ The tool integrates three powerful models: GPT-4o Transcribe for high-quality tr
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| file | file | Yes | The audio file to transcribe. Supports mp3, mp4, mpeg, mpga, m4a, wav, and webm formats with a maximum size of 25MB. |
-| transcription_type | select | No | Determines whether to transcribe the audio in its original language ("transcribe") or translate it to English ("translate"). Note that translation is only available with the Whisper-1 model and will disable streaming output. |
-| model | select | No | The AI model to use for processing. Options include GPT-4o Transcribe (high quality), GPT-4o Mini Transcribe (faster), and Whisper-1 (legacy with more format options). Default is GPT-4o Transcribe. |
-| response_format | select | No | The format of the transcript output. Options include text, JSON, verbose JSON (Whisper-1 only), SRT subtitles (Whisper-1 only), and VTT subtitles (Whisper-1 only). Default is text. |
-| prompt | string | No | Optional guidance for the model's transcription. Useful for improving accuracy with uncommon words, acronyms, or specific terminology by providing context. |
-| language | string | No | ISO-639-1 language code (e.g., 'en', 'zh', 'ja') to help improve accuracy if the audio language is known. This helps the model focus on the specific language patterns. |
-| timestamp_granularities | select | No | Adds timestamps to the transcript at segment or word level. Only available with the Whisper-1 model and requires verbose_json response format. Options are none, segment, or word. |
-| stream | boolean | No | Enables streaming output where transcription results are delivered as they're generated. This feature is only available with GPT-4o Transcribe and GPT-4o Mini Transcribe models. Default is true. |
-| output_format | select | No | Controls how the plugin formats its output in Dify. Options include Default (JSON + Text), JSON Only, or Text Only. This affects how the results are presented to the user in the interface. |
+| Parameter               | Type    | Required | Description                                                                                                                                                                                                                      |
+| ----------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| file                    | file    | Yes      | The audio file to transcribe. Supports mp3, mp4, mpeg, mpga, m4a, wav, and webm formats with a maximum size of 25MB.                                                                                                             |
+| transcription_type      | select  | No       | Determines whether to transcribe the audio in its original language ("transcribe") or translate it to English ("translate"). Note that translation is only available with the Whisper-1 model and will disable streaming output. |
+| model                   | select  | No       | The AI model to use for processing. Options include GPT-4o Transcribe (high quality), GPT-4o Mini Transcribe (faster), and Whisper-1 (legacy with more format options). Default is GPT-4o Transcribe.                            |
+| response_format         | select  | No       | The format of the transcript output. Options include text, JSON, verbose JSON (Whisper-1 only), SRT subtitles (Whisper-1 only), and VTT subtitles (Whisper-1 only). Default is text.                                             |
+| prompt                  | string  | No       | Optional guidance for the model's transcription. Useful for improving accuracy with uncommon words, acronyms, or specific terminology by providing context.                                                                      |
+| language                | string  | No       | ISO-639-1 language code (e.g., 'en', 'zh', 'ja') to help improve accuracy if the audio language is known. This helps the model focus on the specific language patterns.                                                          |
+| timestamp_granularities | select  | No       | Adds timestamps to the transcript at segment or word level. Only available with the Whisper-1 model and requires verbose_json response format. Options are none, segment, or word.                                               |
+| stream                  | boolean | No       | Enables streaming output where transcription results are delivered as they're generated. This feature is only available with GPT-4o Transcribe and GPT-4o Mini Transcribe models. Default is true.                               |
+| output_format           | select  | No       | Controls how the plugin formats its output in Dify. Options include Default (JSON + Text), JSON Only, or Text Only. This affects how the results are presented to the user in the interface.                                     |
 
 ### Parameter Interactions: What Happens When You Change Settings
 
@@ -45,35 +45,37 @@ The OpenAI Audio tool has several settings that affect each other. Understanding
 #### Automatic Setting Adjustments
 
 1. **When You Choose Translation Mode**
-   - **What happens:** If you select "Translate to English" as your transcription type, the tool will automatically switch to the Whisper-1 model, even if you selected a different model.
 
+   - **What happens:** If you select "Translate to English" as your transcription type, the tool will automatically switch to the Whisper-1 model, even if you selected a different model.
 2. **When You Choose Special Output Formats**
+
    - **What happens:** If you select formats like "Verbose JSON", "SRT Subtitles", or "VTT Subtitles" but are using a GPT-4o model, the tool will automatically switch back to plain text format.
    - **Why it's designed this way:** The newer GPT-4o models focus on speed and accuracy for basic transcription, while Whisper-1 offers more formatting options.
-
 3. **When You Request Timestamps**
+
    - **What happens:** If you ask for word or segment timestamps but are using a GPT-4o model, the timestamp feature will be turned off.
-
 4. **When You Enable Streaming**
-   - **What happens:** If you turn on streaming (getting results in real-time) but are using the Whisper-1 model, streaming will be automatically disabled.
 
+   - **What happens:** If you turn on streaming (getting results in real-time) but are using the Whisper-1 model, streaming will be automatically disabled.
 5. **When You Enable Timestamps with Whisper-1**
+
    - **What happens:** If you turn on timestamps and are using the Whisper-1 model, the output format will automatically switch to "Verbose JSON".
    - **Why it's designed this way:** Timestamps contain extra information that doesn't fit in simple text formats, so the tool uses a format that can include all the details.
 
 #### Summary of Automatic Adjustments
 
-| If you set | And | Then automatically | Reason |
-|------------|-----|---------------------|--------|
-| `transcription_type: translate` | any model | `model: whisper-1` | Translation only works with Whisper-1 |
-| `response_format: verbose_json/srt/vtt` | not Whisper-1 | `response_format: text` | Advanced formats only work with Whisper-1 |
-| `timestamp_granularities: segment/word` | not Whisper-1 | `timestamp_granularities: none` | Timestamps only work with Whisper-1 |
-| `timestamp_granularities: segment/word` | Whisper-1 | `response_format: verbose_json` | Timestamps require verbose JSON format |
-| `stream: true` | not GPT-4o model | `stream: false` | Streaming only works with GPT-4o models |
+| If you set                                | And              | Then automatically                | Reason                                    |
+| ----------------------------------------- | ---------------- | --------------------------------- | ----------------------------------------- |
+| `transcription_type: translate`         | any model        | `model: whisper-1`              | Translation only works with Whisper-1     |
+| `response_format: verbose_json/srt/vtt` | not Whisper-1    | `response_format: text`         | Advanced formats only work with Whisper-1 |
+| `timestamp_granularities: segment/word` | not Whisper-1    | `timestamp_granularities: none` | Timestamps only work with Whisper-1       |
+| `timestamp_granularities: segment/word` | Whisper-1        | `response_format: verbose_json` | Timestamps require verbose JSON format    |
+| `stream: true`                          | not GPT-4o model | `stream: false`                 | Streaming only works with GPT-4o models   |
 
 ### Technical Details
 
 The OpenAI Audio tool communicates with OpenAI's Audio API endpoints:
+
 - Transcription: `https://api.openai.com/v1/audio/transcriptions`
 - Translation: `https://api.openai.com/v1/audio/translations`
 
@@ -82,11 +84,13 @@ The tool handles various file input methods, creates temporary files for process
 ### Output Examples
 
 **Text Output:**
+
 ```
 Hello, this is a sample transcription of spoken audio content that demonstrates the accuracy of the OpenAI Audio tool.
 ```
 
 **JSON Output (simplified):**
+
 ```json
 {
   "result": {
