@@ -95,6 +95,7 @@ def run(tool_params: dict, creds: dict, mock: bool = False):
 def load_env_credentials():
     env_path = REPO_ROOT / ".env"
     creds = {}
+    # Load from .env file (if present)
     if env_path.exists():
         for line in env_path.read_text().splitlines():
             line = line.strip()
@@ -103,17 +104,93 @@ def load_env_credentials():
             if "=" in line:
                 k, v = line.split("=", 1)
                 creds[k.strip()] = v.strip()
+    # Merge in process environment (so export VAR=... also works)
+    for k, v in os.environ.items():
+        if k not in creds and ("AZURE" in k or "OPENAI" in k):
+            creds[k] = v
     mapped = {}
+    # OpenAI
     if "OPENAI_API_KEY" in creds:
         mapped["api_key"] = creds["OPENAI_API_KEY"]
-    if "AZURE_OPENAI_API_KEY" in creds:
-        mapped["azure_api_key"] = creds["AZURE_OPENAI_API_KEY"]
-    if "AZURE_OPENAI_ENDPOINT" in creds:
-        mapped["azure_endpoint"] = creds["AZURE_OPENAI_ENDPOINT"]
-    if "AZURE_OPENAI_DEPLOYMENT" in creds:
-        mapped["azure_deployment"] = creds["AZURE_OPENAI_DEPLOYMENT"]
-    if "AZURE_OPENAI_API_VERSION" in creds:
-        mapped["azure_api_version"] = creds["AZURE_OPENAI_API_VERSION"]
+    # Azure keys (common)
+    for key_name in [
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_KEY",
+        "AZURE_API_KEY",
+    ]:
+        if key_name in creds:
+            mapped["azure_api_key"] = creds[key_name]
+            break
+    # Azure endpoints (common)
+    for ep_name in [
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_ENDPOINT",
+        "AZURE_OPENAI_RESOURCE_ENDPOINT",
+    ]:
+        if ep_name in creds:
+            mapped["azure_endpoint"] = creds[ep_name]
+            break
+    # API version (global)
+    for ver_name in [
+        "AZURE_OPENAI_API_VERSION",
+        "AZURE_API_VERSION",
+    ]:
+        if ver_name in creds:
+            mapped["azure_api_version"] = creds[ver_name]
+            break
+    # Whisper specific API version
+    if "AZURE_OPENAI_WHISPER_API_VERSION" in creds:
+        mapped["azure_api_version_whisper"] = creds["AZURE_OPENAI_WHISPER_API_VERSION"]
+    # Deployment names (multiple conventions)
+    # Generic/legacy
+    generic = creds.get("AZURE_OPENAI_DEPLOYMENT") or creds.get("AZURE_DEPLOYMENT")
+    # GPT-4o/transcribe variants
+    gpt4o = creds.get("AZURE_OPENAI_GPT4O_DEPLOYMENT") or \
+            creds.get("AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT") or \
+            creds.get("AZURE_OPENAI_DEPLOYMENT_GPT4O") or \
+            creds.get("AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE") or \
+            creds.get("AZURE_GPT4O_DEPLOYMENT") or \
+            creds.get("AZURE_TRANSCRIBE_DEPLOYMENT") or \
+            creds.get("AZURE_GPT4O_TRANSCRIBE_DEPLOYMENT") or \
+            creds.get("AZURE_AUDIO_TRANSCRIBE_DEPLOYMENT")
+    # Whisper variants
+    whisper = creds.get("AZURE_OPENAI_WHISPER_DEPLOYMENT") or \
+              creds.get("AZURE_OPENAI_DEPLOYMENT_WHISPER") or \
+              creds.get("AZURE_WHISPER_DEPLOYMENT") or \
+              creds.get("AZURE_AUDIO_WHISPER_DEPLOYMENT")
+    # Heuristic fallback: scan for any AZURE*DEPLOYMENT values
+    if not gpt4o or not whisper:
+        for k, v in creds.items():
+            lk = k.lower()
+            if "deployment" in lk and "azure" in lk:
+                vv = (v or "").lower()
+                if (not whisper) and ("whisper" in vv):
+                    whisper = v
+                elif (not gpt4o) and ("4o" in vv or "transcribe" in vv or "gpt-4o" in vv):
+                    gpt4o = v
+                elif not generic:
+                    generic = v
+    # Store separately to decide based on model later
+    if gpt4o:
+        mapped["azure_deployment_gpt4o"] = gpt4o
+    if whisper:
+        mapped["azure_deployment_whisper"] = whisper
+    # Fallback generic (if only one provided)
+    if generic and "azure_deployment_gpt4o" not in mapped and "azure_deployment_whisper" not in mapped:
+        mapped["azure_deployment"] = generic
+    # Final generic detection for endpoint/key if still missing
+    if "azure_endpoint" not in mapped:
+        for k, v in creds.items():
+            lk = k.lower()
+            if "azure" in lk and "endpoint" in lk and v.startswith("http"):
+                mapped["azure_endpoint"] = v
+                break
+    if "azure_api_key" not in mapped:
+        for k, v in creds.items():
+            lk = k.lower()
+            if "azure" in lk and "key" in lk and len(v) > 10:
+                mapped["azure_api_key"] = v
+                break
     return mapped
 
 

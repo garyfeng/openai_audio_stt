@@ -17,6 +17,7 @@ class OpenaiAudioTool(Tool):
         azure_endpoint = self.runtime.credentials.get("azure_endpoint")
         azure_api_key = self.runtime.credentials.get("azure_api_key") or api_key
         azure_api_version = self.runtime.credentials.get("azure_api_version", "2024-12-01-preview")
+        azure_api_version_whisper = self.runtime.credentials.get("azure_api_version_whisper")
         
         if not api_key and not azure_endpoint:
             raise Exception("API key not found in credentials")
@@ -35,6 +36,31 @@ class OpenaiAudioTool(Tool):
         
         # Determine endpoint & model rules
         is_azure = bool(azure_endpoint)
+        # Choose deployment intelligently if Azure
+        azure_deployment_gpt4o = self.runtime.credentials.get("azure_deployment_gpt4o")
+        azure_deployment_whisper = self.runtime.credentials.get("azure_deployment_whisper")
+        selected_deployment = None
+        if is_azure:
+            if azure_deployment_override:
+                selected_deployment = azure_deployment_override
+            else:
+                # If model hints whisper, pick whisper deployment; else pick gpt-4o
+                if model == "whisper-1" and azure_deployment_whisper:
+                    selected_deployment = azure_deployment_whisper
+                elif azure_deployment_gpt4o:
+                    selected_deployment = azure_deployment_gpt4o
+                else:
+                    selected_deployment = self.runtime.credentials.get("azure_deployment")
+            if not selected_deployment:
+                raise Exception("Azure deployment name is required (provide azure_deployment or set dedicated gpt4o/whisper deployment in credentials)")
+        
+        # Build endpoint with API version; Whisper can have a different api-version
+        def _build_azure_url(path_kind: str) -> str:
+            ver = azure_api_version
+            if model == "whisper-1" and azure_api_version_whisper:
+                ver = azure_api_version_whisper
+            return f"{azure_endpoint.rstrip('/')}/openai/deployments/{selected_deployment}/audio/{path_kind}?api-version={ver}"
+        
         if transcription_type == "translate":
             if not is_azure:
                 # OpenAI translate supports only whisper-1
@@ -42,19 +68,15 @@ class OpenaiAudioTool(Tool):
                     model = "whisper-1"
                 api_endpoint = "https://api.openai.com/v1/audio/translations"
             else:
-                # Azure translate via Whisper deployment (verify support; otherwise surface error)
-                deployment = azure_deployment_override or self.runtime.credentials.get("azure_deployment")
-                if not deployment:
-                    raise Exception("Azure deployment name is required for Azure translate")
-                api_endpoint = f"{azure_endpoint.rstrip('/')}/openai/deployments/{deployment}/audio/translations?api-version={azure_api_version}"
+                # Azure translate: must target Whisper deployment
+                if model != "whisper-1" and selected_deployment and "whisper" in selected_deployment:
+                    model = "whisper-1"
+                api_endpoint = _build_azure_url("translations")
         else:
             if not is_azure:
                 api_endpoint = "https://api.openai.com/v1/audio/transcriptions"
             else:
-                deployment = azure_deployment_override or self.runtime.credentials.get("azure_deployment")
-                if not deployment:
-                    raise Exception("Azure deployment name is required for Azure transcribe")
-                api_endpoint = f"{azure_endpoint.rstrip('/')}/openai/deployments/{deployment}/audio/transcriptions?api-version={azure_api_version}"
+                api_endpoint = _build_azure_url("transcriptions")
         
         # Enforce format constraints: Whisper-only advanced formats
         if model != "whisper-1":
