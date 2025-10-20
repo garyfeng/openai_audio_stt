@@ -269,7 +269,6 @@ parameters:
       pt_BR: Escolha como o plug-in deve formatar sua saída no Dify. O padrão retorna ambos JSON e texto, enquanto as outras op es retornam apenas um formato.
     llm_description: Choose how the plugin should format its output in Dify. Default returns both JSON and text, while the other options return only one format.
 
-parameters:
   - name: azure_deployment
     type: string
     required: false
