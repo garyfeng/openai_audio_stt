@@ -271,3 +271,19 @@ parameters:
 extra:
   python:
     source: tools/openai_audio.py
+
+  - name: azure_deployment
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Azure Deployment Override
+      zh_Hans: Azure 部署覆盖
+      pt_BR: Sobrescrever Implantação Azure
+      ja_JP: Azure デプロイ上書き
+    human_description:
+      en_US: Optional. Override the Azure deployment name set in provider credentials for this call.
+      zh_Hans: 可选。为本次调用覆盖在提供者凭据中设置的 Azure 部署名称。
+      pt_BR: Opcional. Substitua o nome da implantação Azure definido nas credenciais do provedor para esta chamada.
+      ja_JP: 任意。今回の呼び出しでプロバイダーの資格情報に設定された Azure のデプロイ名を上書きします。
+    llm_description: Optional. Override the Azure deployment name for this invocation.

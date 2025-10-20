@@ -10,11 +10,16 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 
 class OpenaiAudioTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        # Credentials
         api_key = self.runtime.credentials.get("api_key")
+        azure_endpoint = self.runtime.credentials.get("azure_endpoint")
+        azure_api_key = self.runtime.credentials.get("azure_api_key") or api_key
+        azure_api_version = self.runtime.credentials.get("azure_api_version", "2024-12-01-preview")
         
-        if not api_key:
+        if not api_key and not azure_endpoint:
             raise Exception("API key not found in credentials")
         
+        # Parameters
         file_data = tool_parameters.get("file")
         transcription_type = tool_parameters.get("transcription_type", "transcribe")
         model = tool_parameters.get("model", "gpt-4o-transcribe")
@@ -24,22 +29,47 @@ class OpenaiAudioTool(Tool):
         timestamp_granularities = tool_parameters.get("timestamp_granularities", "none")
         stream = tool_parameters.get("stream", False)
         output_format = tool_parameters.get("output_format", "default")
+        azure_deployment_override = tool_parameters.get("azure_deployment")
         
+        # Determine endpoint & model rules
+        is_azure = bool(azure_endpoint)
         if transcription_type == "translate":
-            if model != "whisper-1":
-                model = "whisper-1"
-            api_endpoint = "https://api.openai.com/v1/audio/translations"
+            if not is_azure:
+                # OpenAI translate supports only whisper-1
+                if model != "whisper-1":
+                    model = "whisper-1"
+                api_endpoint = "https://api.openai.com/v1/audio/translations"
+            else:
+                # Azure translate via Whisper deployment (verify support; otherwise surface error)
+                deployment = azure_deployment_override or self.runtime.credentials.get("azure_deployment")
+                if not deployment:
+                    raise Exception("Azure deployment name is required for Azure translate")
+                api_endpoint = f"{azure_endpoint.rstrip('/')}/openai/deployments/{deployment}/audio/translations?api-version={azure_api_version}"
         else:
-            api_endpoint = "https://api.openai.com/v1/audio/transcriptions"
+            if not is_azure:
+                api_endpoint = "https://api.openai.com/v1/audio/transcriptions"
+            else:
+                deployment = azure_deployment_override or self.runtime.credentials.get("azure_deployment")
+                if not deployment:
+                    raise Exception("Azure deployment name is required for Azure transcribe")
+                api_endpoint = f"{azure_endpoint.rstrip('/')}/openai/deployments/{deployment}/audio/transcriptions?api-version={azure_api_version}"
         
-        if model != "whisper-1" and response_format in ["verbose_json", "srt", "vtt"]:
-            response_format = "text"
-            
-        if model != "whisper-1" and timestamp_granularities != "none":
-            timestamp_granularities = "none"
+        # Enforce format constraints: Whisper-only advanced formats
+        if (not is_azure and model != "whisper-1") or (is_azure and (azure_deployment_override or self.runtime.credentials.get("azure_deployment"))) and model != "whisper-1":
+            if response_format in ["verbose_json", "srt", "vtt"]:
+                response_format = "text"
+            if timestamp_granularities != "none":
+                timestamp_granularities = "none"
         
-        if stream and not model.startswith("gpt-4o"):
-            stream = False
+        # Streaming support: only for GPT-4o models
+        if stream:
+            if not is_azure:
+                if not model.startswith("gpt-4o"):
+                    stream = False
+            else:
+                # For Azure, rely on deployment being GPT-4o to stream; if user selected Whisper translate, disable stream
+                if transcription_type == "translate":
+                    stream = False
         
         if not file_data:
             raise Exception("No audio file provided")
@@ -106,22 +136,25 @@ class OpenaiAudioTool(Tool):
                 temp_file.write(file_content.encode() if isinstance(file_content, str) else file_content)
                 temp_file_path = temp_file.name
             
-            headers = {
-                "Authorization": f"Bearer {api_key}"
-            }
-            
-            request_data = {
-                "model": model,
-                "response_format": response_format
-            }
+            # Build headers & data depending on provider
+            if is_azure:
+                headers = {"api-key": azure_api_key}
+                request_data = {"response_format": response_format}
+            else:
+                headers = {"Authorization": f"Bearer {api_key}"}
+                request_data = {"model": model, "response_format": response_format}
             
             if prompt:
                 request_data["prompt"] = prompt
-                
+            
             if language:
                 request_data["language"] = language
-                
-            if timestamp_granularities != "none" and model == "whisper-1":
+            
+            # Whisper-only timestamp granularities (works for OpenAI and Azure Whisper deployments)
+            if timestamp_granularities != "none" and (
+                (not is_azure and model == "whisper-1") or (is_azure and transcription_type != "translate")
+            ):
+                # For Whisper timestamps, response_format must be verbose_json
                 request_data["response_format"] = "verbose_json"
                 if timestamp_granularities == "segment":
                     request_data["timestamp_granularities"] = ["segment"]
