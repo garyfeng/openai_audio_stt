@@ -25,3 +25,15 @@ This plugin does not retain any of your audio data or transcriptions locally. Al
 ### Contact
 
 If you have any questions or concerns about privacy related to this plugin, please contact the plugin maintainer at the email address provided in the README.md file.
+
+### Azure OpenAI Data Usage
+
+When configured for Azure, audio files and related metadata are sent to Azure OpenAI endpoints for processing. Azure may store and use this data in accordance with Microsoft’s policies for Azure OpenAI.
+
+- Azure OpenAI service terms: https://learn.microsoft.com/azure/ai-services/openai/
+- Microsoft Privacy Statement: https://privacy.microsoft.com/privacystatement
+
+Note:
+- If separate Azure resources are used for GPT‑4o Transcribe and Whisper, requests are routed to the corresponding resource and region based on configuration.
+- Endpoints are normalized to avoid accidental misrouting.
+- The plugin does not retain audio or transcripts locally beyond temporary processing, and temporary files are removed after processing.

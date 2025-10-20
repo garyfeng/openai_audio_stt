@@ -9,9 +9,9 @@ label:
   pt_BR: openai_audio
 description:
   en_US: Convert audio to text with OpenAI's Audio API, supporting transcription and translation across multiple languages with high accuracy.
-  ja_JP: Convert audio to text with OpenAI's Audio API, supporting transcription and translation across multiple languages with high accuracy.
-  zh_Hans: Convert audio to text with OpenAI's Audio API, supporting transcription and translation across multiple languages with high accuracy.
-  pt_BR: Convert audio to text with OpenAI's Audio API, supporting transcription and translation across multiple languages with high accuracy.
+  ja_JP: OpenAIのAudio APIを使用して音声をテキストに変換し、多言語での高精度な文字起こしおよび翻訳に対応します。
+  zh_Hans: 使用 OpenAI 的 Audio API 将音频转换为文本，支持多语言的高精度转录与翻译。
+  pt_BR: Converta áudio em texto com a API de Áudio da OpenAI, com suporte a transcrição e tradução em vários idiomas com alta precisão。
 icon: icon.svg
 resource:
   memory: 268435456

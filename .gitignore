@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv*
+
+# macOS
+.DS_Store
+
+# Env
+.env
+.env.*
+
+# Build
+/dist/
+*.zip
+/samples/
+/results/

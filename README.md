@@ -108,3 +108,57 @@ Follow me on X (Twitter): https://x.com/lyson_ober
 ### Privacy
 
 Please refer to the [PRIVACY.md](./PRIVACY.md) file for information about how your data is handled when using this plugin. This plugin does not collect any data directly, but your audio is processed through OpenAI's services subject to their privacy policies.
+
+## Azure OpenAI Support (GPT-4o Transcribe + Whisper)
+
+This plugin now supports Azure OpenAI deployments for GPT-4o Transcribe and Whisper. Set provider credentials accordingly:
+
+- `azure_endpoint`: e.g., `https://<your-resource>.openai.azure.com`
+- `azure_api_key`: Azure OpenAI API key (or reuse `api_key`)
+- `azure_deployment`: Your deployment name in Azure (e.g., `gpt-4o-transcribe` or `whisper-1`)
+- `azure_api_version`: default `2024-12-01-preview`
+
+When Azure credentials are present, the plugin automatically uses Azure endpoints.
+
+### Curl example (Azure GPT-4o Transcribe)
+
+```
+curl -X POST \
+  -H "api-key: $AZURE_API_KEY" \
+  -F "file=@sample.mp3" \
+  -F "response_format=text" \
+  "$AZURE_ENDPOINT/openai/deployments/$AZURE_DEPLOYMENT/audio/transcriptions?api-version=2024-12-01-preview"
+```
+
+### Whisper on Azure
+- Transcribe supports `verbose_json`, `srt`, `vtt` and timestamp granularities (segment/word).
+- Translate uses the translations endpoint via the Whisper deployment.
+
+### Streaming
+- GPT-4o Transcribe supports streaming via SSE. Whisper translate does not stream.
+
+### Local Testing Outside Dify
+See `scripts/test_harness.py` for a quick way to call the tool directly.
+
+### Dify Provider Configuration (Dual Azure Resources)
+
+When installing this as a Dify plugin, you can configure separate Azure resources for GPT-4o Transcribe and Whisper:
+
+- Transcribe (GPT-4o):
+  - Azure Endpoint (Transcribe)
+  - Azure API Key (Transcribe)
+  - Azure API Version (Transcribe) — default 2024-12-01-preview
+  - Azure GPT-4o Deployment Name (e.g., gpt-4o-transcribe)
+
+- Whisper:
+  - Azure Whisper Endpoint
+  - Azure Whisper API Key
+  - Azure Whisper API Version — typically 2024-02-01
+  - Azure Whisper Deployment Name (e.g., whisper-1 or your alias)
+
+Notes:
+- Endpoints are normalized to avoid trailing slashes and duplicate //.
+- Streaming is supported for GPT-4o; Whisper verbose_json/timestamps/srt/vtt are supported (translate non-streaming).
+- You can set a per-call Azure deployment override in tool parameters if you have multiple deployments.
+
+This repository currently passes local testing (outside Dify) for issue #1, but in-situ plugin testing has not yet been performed.
