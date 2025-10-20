@@ -57,7 +57,7 @@ class OpenaiAudioTool(Tool):
                 api_endpoint = f"{azure_endpoint.rstrip('/')}/openai/deployments/{deployment}/audio/transcriptions?api-version={azure_api_version}"
         
         # Enforce format constraints: Whisper-only advanced formats
-        if (not is_azure and model != "whisper-1") or (is_azure and (azure_deployment_override or self.runtime.credentials.get("azure_deployment"))) and model != "whisper-1":
+        if model != "whisper-1":
             if response_format in ["verbose_json", "srt", "vtt"]:
                 response_format = "text"
             if timestamp_granularities != "none":
