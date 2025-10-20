@@ -154,3 +154,15 @@ extra:
       en_US: 2024-02-01
     help:
       en_US: API version for the Whisper resource. Defaults to 2024-02-01 if unspecified.
+  azure_deployment_gpt4o:
+    type: text-input
+    required: false
+    label:
+      en_US: Azure GPT-4o Deployment Name
+      zh_Hans: Azure GPT-4o 部署名称
+      pt_BR: Nome da Implantação Azure GPT-4o
+      ja_JP: Azure GPT-4o デプロイ名
+    placeholder:
+      en_US: e.g., gpt-4o-transcribe
+    help:
+      en_US: Deployment name configured in Azure for GPT-4o Transcribe.
