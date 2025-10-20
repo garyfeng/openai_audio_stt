@@ -1,0 +1,16 @@
+{"type": "text", "text": "Hello"}
+{"type": "text", "text": " world"}
+{"type": "text", "text": ","}
+{"type": "text", "text": " this"}
+{"type": "text", "text": " is"}
+{"type": "text", "text": " a"}
+{"type": "text", "text": " test"}
+{"type": "text", "text": " of"}
+{"type": "text", "text": " transcription"}
+{"type": "text", "text": " with"}
+{"type": "text", "text": " Azure"}
+{"type": "text", "text": " Open"}
+{"type": "text", "text": "AI"}
+{"type": "text", "text": "."}
+{"type": "text", "text": "Hello world, this is a test of transcription with Azure OpenAI."}
+{"type": "json", "data": {"result": {"text": "Hello world, this is a test of transcription with Azure OpenAI."}}}

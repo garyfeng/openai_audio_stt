@@ -112,35 +112,39 @@ def load_env_credentials():
     # OpenAI
     if "OPENAI_API_KEY" in creds:
         mapped["api_key"] = creds["OPENAI_API_KEY"]
-    # Azure keys (common)
-    for key_name in [
-        "AZURE_OPENAI_API_KEY",
-        "AZURE_OPENAI_KEY",
-        "AZURE_API_KEY",
-    ]:
-        if key_name in creds:
-            mapped["azure_api_key"] = creds[key_name]
-            break
-    # Azure endpoints (common)
-    for ep_name in [
-        "AZURE_OPENAI_ENDPOINT",
-        "AZURE_ENDPOINT",
-        "AZURE_OPENAI_RESOURCE_ENDPOINT",
-    ]:
-        if ep_name in creds:
-            mapped["azure_endpoint"] = creds[ep_name]
-            break
-    # API version (global)
-    for ver_name in [
-        "AZURE_OPENAI_API_VERSION",
-        "AZURE_API_VERSION",
-    ]:
-        if ver_name in creds:
-            mapped["azure_api_version"] = creds[ver_name]
-            break
-    # Whisper specific API version
+    # Azure TRANSCRIBE resource
+    if "AZURE_OPENAI_TRANSCRIBE_API_KEY" in creds:
+        mapped["azure_api_key"] = creds["AZURE_OPENAI_TRANSCRIBE_API_KEY"]
+    if "AZURE_OPENAI_TRANSCRIBE_ENDPOINT" in creds:
+        mapped["azure_endpoint"] = creds["AZURE_OPENAI_TRANSCRIBE_ENDPOINT"]
+    if "AZURE_OPENAI_TRANSCRIBE_API_VERSION" in creds:
+        mapped["azure_api_version"] = creds["AZURE_OPENAI_TRANSCRIBE_API_VERSION"]
+    if "AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT" in creds:
+        mapped["azure_deployment_gpt4o"] = creds["AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT"]
+
+    # Azure WHISPER resource
+    if "AZURE_OPENAI_WHISPER_API_KEY" in creds:
+        mapped["azure_api_key_whisper"] = creds["AZURE_OPENAI_WHISPER_API_KEY"]
+    if "AZURE_OPENAI_WHISPER_ENDPOINT" in creds:
+        mapped["azure_endpoint_whisper"] = creds["AZURE_OPENAI_WHISPER_ENDPOINT"]
     if "AZURE_OPENAI_WHISPER_API_VERSION" in creds:
         mapped["azure_api_version_whisper"] = creds["AZURE_OPENAI_WHISPER_API_VERSION"]
+    if "AZURE_OPENAI_WHISPER_DEPLOYMENT" in creds:
+        mapped["azure_deployment_whisper"] = creds["AZURE_OPENAI_WHISPER_DEPLOYMENT"]
+
+    # Azure generic fallback (if not provided)
+    for key_name in ["AZURE_OPENAI_API_KEY","AZURE_OPENAI_KEY","AZURE_API_KEY"]:
+        if "azure_api_key" not in mapped and key_name in creds:
+            mapped["azure_api_key"] = creds[key_name]
+            break
+    for ep_name in ["AZURE_OPENAI_ENDPOINT","AZURE_ENDPOINT","AZURE_OPENAI_RESOURCE_ENDPOINT"]:
+        if "azure_endpoint" not in mapped and ep_name in creds:
+            mapped["azure_endpoint"] = creds[ep_name]
+            break
+    for ver_name in ["AZURE_OPENAI_API_VERSION","AZURE_API_VERSION"]:
+        if "azure_api_version" not in mapped and ver_name in creds:
+            mapped["azure_api_version"] = creds[ver_name]
+            break
     # Deployment names (multiple conventions)
     # Generic/legacy
     generic = creds.get("AZURE_OPENAI_DEPLOYMENT") or creds.get("AZURE_DEPLOYMENT")
