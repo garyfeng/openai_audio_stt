@@ -268,10 +268,8 @@ parameters:
       zh_Hans: 选择插件在 Dify 中的输出格式。默认返回 JSON 和文本，而其他选项只能返回一种格式。
       pt_BR: Escolha como o plug-in deve formatar sua saída no Dify. O padrão retorna ambos JSON e texto, enquanto as outras op es retornam apenas um formato.
     llm_description: Choose how the plugin should format its output in Dify. Default returns both JSON and text, while the other options return only one format.
-extra:
-  python:
-    source: tools/openai_audio.py
 
+parameters:
   - name: azure_deployment
     type: string
     required: false
@@ -284,6 +282,10 @@ extra:
     human_description:
       en_US: Optional. Override the Azure deployment name set in provider credentials for this call.
       zh_Hans: 可选。为本次调用覆盖在提供者凭据中设置的 Azure 部署名称。
-      pt_BR: Opcional. Substitua o nome da implantação Azure definido nas credenciais do provedor para esta chamada.
+      pt_BR: Opcional. Substitua o nome da implantação Azure definido nas credenciais do provedor para esta chamada。
       ja_JP: 任意。今回の呼び出しでプロバイダーの資格情報に設定された Azure のデプロイ名を上書きします。
     llm_description: Optional. Override the Azure deployment name for this invocation.
+
+extra:
+  python:
+    source: tools/openai_audio.py
