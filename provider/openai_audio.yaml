@@ -80,7 +80,7 @@ credentials_for_provider:
       en_US: e.g., gpt-4o-transcribe or whisper-1
       zh_Hans: 例如，gpt-4o-transcribe 或 whisper-1
       pt_BR: ex., gpt-4o-transcribe ou whisper-1
-      ja_JP: 例: gpt-4o-transcribe または whisper-1
+      ja_JP: 例, gpt-4o-transcribe または whisper-1
     help:
       en_US: The deployment name you configured in Azure (not necessarily the same as the model name).
       zh_Hans: 您在 Azure 中配置的部署名称（不一定与模型名称相同）。
