@@ -149,8 +149,20 @@ if __name__ == "__main__":
     audio_path = pathlib.Path(args.audio)
     data = audio_path.read_bytes()
 
+    # Guess MIME from extension
+    ext = audio_path.suffix.lower()
+    mime = "application/octet-stream"
+    if ext in [".mp3"]:
+        mime = "audio/mpeg"
+    elif ext in [".m4a", ".mp4"]:
+        mime = "audio/mp4"
+    elif ext in [".wav"]:
+        mime = "audio/wav"
+    elif ext in [".aiff", ".aif"]:
+        mime = "audio/aiff"
+
     params = {
-        "file": {"name": audio_path.name, "type": "application/octet-stream", "content": data},
+        "file": {"name": audio_path.name, "type": mime, "content": data},
         "transcription_type": "translate" if args.translate else "transcribe",
         "model": args.model,
         "response_format": args.response_format,
