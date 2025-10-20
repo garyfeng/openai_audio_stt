@@ -15,6 +15,18 @@ class OpenaiAudioTool(Tool):
         # Credentials
         api_key = self.runtime.credentials.get("api_key")
         azure_endpoint = self.runtime.credentials.get("azure_endpoint")
+        if azure_endpoint:
+            # Normalize endpoint: remove trailing slashes and collapse duplicate slashes
+            azure_endpoint = azure_endpoint.strip()
+            while azure_endpoint.endswith('/'):
+                azure_endpoint = azure_endpoint[:-1]
+            # Replace any occurrences of '//' (not including protocol) with '/'
+            # e.g., https://host//openai -> https://host/openai
+            proto_sep = '://'
+            if proto_sep in azure_endpoint:
+                proto, rest = azure_endpoint.split(proto_sep, 1)
+                rest = rest.replace('//', '/')
+                azure_endpoint = f"{proto}{proto_sep}{rest}"
         azure_api_key = self.runtime.credentials.get("azure_api_key") or api_key
         azure_api_version = self.runtime.credentials.get("azure_api_version", "2024-12-01-preview")
         azure_api_version_whisper = self.runtime.credentials.get("azure_api_version_whisper")
