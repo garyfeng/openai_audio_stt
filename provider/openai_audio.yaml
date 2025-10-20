@@ -32,12 +32,6 @@ credentials_for_provider:
       pt_BR: Sua chave API da OpenAI. Você pode encontrá-la nas configurações da sua conta OpenAI.
       ja_JP: あなたのOpenAI APIキーです。OpenAIアカウント設定で確認できます。
     url: https://platform.openai.com/api-keys
-tools:
-  - tools/openai_audio.yaml
-extra:
-  python:
-    source: provider/openai_audio.py
-
   azure_api_key:
     type: secret-input
     required: false
@@ -107,3 +101,8 @@ extra:
       zh_Hans: Azure OpenAI 资源的 API 版本。默认值为 2024-12-01-preview。
       pt_BR: A versão da API para o seu recurso Azure OpenAI. O padrão é 2024-12-01-preview。
       ja_JP: Azure OpenAI リソースの API バージョン。デフォルトは 2024-12-01-preview です。
+tools:
+  - tools/openai_audio.yaml
+extra:
+  python:
+    source: provider/openai_audio.py

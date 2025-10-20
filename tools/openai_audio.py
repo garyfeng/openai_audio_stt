@@ -1,4 +1,6 @@
 from collections.abc import Generator
+# ruff: noqa
+
 from typing import Any
 import requests
 import json
