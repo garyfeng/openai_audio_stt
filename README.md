@@ -139,3 +139,26 @@ curl -X POST \
 
 ### Local Testing Outside Dify
 See `scripts/test_harness.py` for a quick way to call the tool directly.
+
+### Dify Provider Configuration (Dual Azure Resources)
+
+When installing this as a Dify plugin, you can configure separate Azure resources for GPT-4o Transcribe and Whisper:
+
+- Transcribe (GPT-4o):
+  - Azure Endpoint (Transcribe)
+  - Azure API Key (Transcribe)
+  - Azure API Version (Transcribe) — default 2024-12-01-preview
+  - Azure GPT-4o Deployment Name (e.g., gpt-4o-transcribe)
+
+- Whisper:
+  - Azure Whisper Endpoint
+  - Azure Whisper API Key
+  - Azure Whisper API Version — typically 2024-02-01
+  - Azure Whisper Deployment Name (e.g., whisper-1 or your alias)
+
+Notes:
+- Endpoints are normalized to avoid trailing slashes and duplicate //.
+- Streaming is supported for GPT-4o; Whisper verbose_json/timestamps/srt/vtt are supported (translate non-streaming).
+- You can set a per-call Azure deployment override in tool parameters if you have multiple deployments.
+
+This repository currently passes local testing (outside Dify) for issue #1, but in-situ plugin testing has not yet been performed.

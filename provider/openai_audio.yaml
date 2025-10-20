@@ -64,10 +64,10 @@ credentials_for_provider:
       pt_BR: https://<seu-recurso>.openai.azure.com
       ja_JP: https://<your-resource>.openai.azure.com
     help:
-      en_US: The base URL of your Azure OpenAI resource.
-      zh_Hans: 您的 Azure OpenAI 资源的基础 URL。
-      pt_BR: A URL base do seu recurso Azure OpenAI.
-      ja_JP: Azure OpenAI リソースのベース URL です。
+      en_US: The base URL of your Azure OpenAI resource (Transcribe/GPT-4o). If Whisper is on a separate resource, fill the Whisper fields below.
+      zh_Hans: 您的 Azure OpenAI 资源（Transcribe/GPT-4o）的基础 URL。如果 Whisper 位于另一个资源，请填写下方 Whisper 字段。
+      pt_BR: A URL base do seu recurso Azure OpenAI (Transcribe/GPT-4o). Se o Whisper estiver em um recurso separado, preencha os campos Whisper abaixo.
+      ja_JP: Azure OpenAI リソース（Transcribe/GPT-4o）のベース URL。Whisper が別のリソースにある場合は、下の Whisper 項目を入力してください。
   azure_deployment:
     type: text-input
     required: false
