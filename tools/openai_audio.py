@@ -27,11 +27,14 @@ class OpenaiAudioTool(Tool):
                 proto, rest = azure_endpoint.split(proto_sep, 1)
                 rest = rest.replace('//', '/')
                 azure_endpoint = f"{proto}{proto_sep}{rest}"
+        # Multi-resource support: allow separate whisper credentials
+        azure_api_key_whisper = self.runtime.credentials.get("azure_api_key_whisper")
+        azure_endpoint_whisper = self.runtime.credentials.get("azure_endpoint_whisper")
         azure_api_key = self.runtime.credentials.get("azure_api_key") or api_key
         azure_api_version = self.runtime.credentials.get("azure_api_version", "2024-12-01-preview")
         azure_api_version_whisper = self.runtime.credentials.get("azure_api_version_whisper")
         
-        if not api_key and not azure_endpoint:
+        if not api_key and not (azure_endpoint or azure_endpoint_whisper):
             raise Exception("API key not found in credentials")
         
         # Parameters
@@ -48,6 +51,7 @@ class OpenaiAudioTool(Tool):
         
         # Determine endpoint & model rules
         is_azure = bool(azure_endpoint)
+        is_azure_whisper = bool(azure_endpoint_whisper)
         # Choose deployment intelligently if Azure
         azure_deployment_gpt4o = self.runtime.credentials.get("azure_deployment_gpt4o")
         azure_deployment_whisper = self.runtime.credentials.get("azure_deployment_whisper")
@@ -68,10 +72,20 @@ class OpenaiAudioTool(Tool):
         
         # Build endpoint with API version; Whisper can have a different api-version
         def _build_azure_url(path_kind: str) -> str:
+            # Decide endpoint & key based on model (whisper can be a separate resource)
+            endpoint_to_use = azure_endpoint
+            key_to_use = azure_api_key
             ver = azure_api_version
-            if model == "whisper-1" and azure_api_version_whisper:
-                ver = azure_api_version_whisper
-            return f"{azure_endpoint.rstrip('/')}/openai/deployments/{selected_deployment}/audio/{path_kind}?api-version={ver}"
+            if model == "whisper-1":
+                if azure_endpoint_whisper:
+                    endpoint_to_use = azure_endpoint_whisper
+                if azure_api_key_whisper:
+                    key_to_use = azure_api_key_whisper
+                if azure_api_version_whisper:
+                    ver = azure_api_version_whisper
+            # Normalize endpoint again (defensive)
+            endpoint = (endpoint_to_use or "").strip().rstrip('/')
+            return f"{endpoint}/openai/deployments/{selected_deployment}/audio/{path_kind}?api-version={ver}"
         
         if transcription_type == "translate":
             if not is_azure:
@@ -174,7 +188,11 @@ class OpenaiAudioTool(Tool):
             
             # Build headers & data depending on provider
             if is_azure:
-                headers = {"api-key": azure_api_key}
+                # Choose appropriate key for whisper vs gpt-4o
+                use_key = azure_api_key
+                if model == "whisper-1" and azure_api_key_whisper:
+                    use_key = azure_api_key_whisper
+                headers = {"api-key": use_key}
                 request_data = {"response_format": response_format}
             else:
                 headers = {"Authorization": f"Bearer {api_key}"}
