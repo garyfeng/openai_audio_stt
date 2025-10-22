@@ -62,6 +62,67 @@ credentials_for_provider:
       en_US: https://<your-resource>.openai.azure.com
       zh_Hans: https://<your-resource>.openai.azure.com
       pt_BR: https://<seu-recurso>.openai.azure.com
+  azure_api_key_whisper:
+    type: secret-input
+    required: false
+    label:
+      en_US: Azure Whisper API Key
+      zh_Hans: Azure Whisper API 密钥
+      pt_BR: Chave API do Azure Whisper
+      ja_JP: Azure Whisper API キー
+    placeholder:
+      en_US: Please input your Azure Whisper API key
+    help:
+      en_US: Azure API key for the Whisper resource (optional if using same resource).
+  azure_endpoint_whisper:
+    type: text-input
+    required: false
+    label:
+      en_US: Azure Whisper Endpoint
+      zh_Hans: Azure Whisper 终结点
+      pt_BR: Endpoint do Azure Whisper
+      ja_JP: Azure Whisper エンドポイント
+    placeholder:
+      en_US: https://<your-whisper-resource>.openai.azure.com
+    help:
+      en_US: Base URL for the Azure OpenAI Whisper resource.
+  azure_deployment_whisper:
+    type: text-input
+    required: false
+    label:
+      en_US: Azure Whisper Deployment Name
+      zh_Hans: Azure Whisper 部署名称
+      pt_BR: Nome da Implantação do Azure Whisper
+      ja_JP: Azure Whisper デプロイ名
+    placeholder:
+      en_US: e.g., whisper-1 or your-deployment-name
+    help:
+      en_US: The deployment name configured for Whisper in Azure.
+  azure_api_version_whisper:
+    type: text-input
+    required: false
+    label:
+      en_US: Azure Whisper API Version
+      zh_Hans: Azure Whisper API 版本
+      pt_BR: Versão da API do Azure Whisper
+      ja_JP: Azure Whisper API バージョン
+    placeholder:
+      en_US: 2024-02-01
+    help:
+      en_US: API version for the Whisper resource. Defaults to 2024-02-01 if unspecified.
+  azure_deployment_gpt4o:
+    type: text-input
+    required: false
+    label:
+      en_US: Azure GPT-4o Deployment Name
+      zh_Hans: Azure GPT-4o 部署名称
+      pt_BR: Nome da Implantação Azure GPT-4o
+      ja_JP: Azure GPT-4o デプロイ名
+    placeholder:
+      en_US: e.g., gpt-4o-transcribe
+    help:
+      en_US: Deployment name configured in Azure for GPT-4o Transcribe.
+
       ja_JP: https://<your-resource>.openai.azure.com
     help:
       en_US: The base URL of your Azure OpenAI resource (Transcribe/GPT-4o). If Whisper is on a separate resource, fill the Whisper fields below.
