@@ -87,18 +87,18 @@ class OpenaiAudioProvider(ToolProvider):
             # Fallback: OpenAI key validation (if Azure not set at all)
             if not azure_endpoint and not whisper_endpoint:
                 api_key = credentials.get("api_key")
-                if not api_key:
-                    raise ValueError("API key is required")
-                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=15)
-                if response.status_code != 200:
-                    error_message = f"API key validation failed with status code: {response.status_code}"
-                    try:
-                        error_data = response.json()
-                        if "error" in error_data and "message" in error_data["error"]:
-                            error_message = f"API key validation failed: {error_data['error']['message']}"
-                    except Exception:
-                        pass
-                    raise ValueError(error_message)
+                if api_key:
+                    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                    response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=15)
+                    if response.status_code != 200:
+                        error_message = f"API key validation failed with status code: {response.status_code}"
+                        try:
+                            error_data = response.json()
+                            if "error" in error_data and "message" in error_data["error"]:
+                                error_message = f"API key validation failed: {error_data['error']['message']}"
+                        except Exception:
+                            pass
+                        raise ValueError(error_message)
+                # If neither Azure nor OpenAI is provided, allow save; tool will error at invoke time if needed
         except Exception as e:
             raise ToolProviderCredentialValidationError(str(e))

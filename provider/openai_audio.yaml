@@ -15,7 +15,7 @@ identity:
 credentials_for_provider:
   api_key:
     type: secret-input
-    required: true
+    required: false
     label:
       en_US: API Key
       zh_Hans: API 密钥
