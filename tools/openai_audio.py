@@ -14,14 +14,13 @@ class OpenaiAudioTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         # Credentials
         api_key = self.runtime.credentials.get("api_key")
-        azure_endpoint = self.runtime.credentials.get("azure_endpoint")
+        azure_endpoint_transcribe = self.runtime.credentials.get("azure_endpoint_transcribe") or self.runtime.credentials.get("azure_endpoint")
+        azure_endpoint = azure_endpoint_transcribe
         if azure_endpoint:
             # Normalize endpoint: remove trailing slashes and collapse duplicate slashes
             azure_endpoint = azure_endpoint.strip()
             while azure_endpoint.endswith('/'):
                 azure_endpoint = azure_endpoint[:-1]
-            # Replace any occurrences of '//' (not including protocol) with '/'
-            # e.g., https://host//openai -> https://host/openai
             proto_sep = '://'
             if proto_sep in azure_endpoint:
                 proto, rest = azure_endpoint.split(proto_sep, 1)

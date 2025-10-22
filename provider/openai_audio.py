@@ -21,10 +21,10 @@ class OpenaiAudioProvider(ToolProvider):
                 return ep
             
             # Validate Azure Transcribe (GPT-4o) if configured
-            azure_endpoint = _norm(credentials.get("azure_endpoint")) or _norm(credentials.get("azure_openai_transcribe_endpoint"))
-            azure_api_key = credentials.get("azure_api_key") or credentials.get("azure_openai_transcribe_api_key") or credentials.get("api_key")
-            azure_api_version = credentials.get("azure_api_version", credentials.get("azure_openai_transcribe_api_version", "2024-12-01-preview"))
-            azure_deployment_gpt4o = credentials.get("azure_deployment_gpt4o") or credentials.get("azure_openai_transcribe_deployment") or credentials.get("azure_deployment")
+            azure_endpoint = _norm(credentials.get("azure_endpoint_transcribe")) or _norm(credentials.get("azure_endpoint")) or _norm(credentials.get("azure_openai_transcribe_endpoint"))
+            azure_api_key = credentials.get("azure_api_key_transcribe") or credentials.get("azure_api_key") or credentials.get("azure_openai_transcribe_api_key") or credentials.get("api_key")
+            azure_api_version = credentials.get("azure_api_version_transcribe") or credentials.get("azure_api_version") or credentials.get("azure_openai_transcribe_api_version") or "2024-12-01-preview"
+            azure_deployment_transcribe = credentials.get("azure_deployment_transcribe") or credentials.get("azure_deployment_gpt4o") or credentials.get("azure_openai_transcribe_deployment") or credentials.get("azure_deployment")
             
             if azure_endpoint:
                 if not azure_api_key:
