@@ -30,25 +30,42 @@ class OpenaiAudioProvider(ToolProvider):
                 if not azure_api_key:
                     raise ValueError("Azure Transcribe API key is required when azure_endpoint is set")
                 headers = {"api-key": azure_api_key}
-                url = f"{azure_endpoint}/openai/deployments?api-version={azure_api_version}"
-                resp = requests.get(url, headers=headers, timeout=15)
+                def _list_deployments(endpoint: str, version: str):
+                    url = f"{endpoint}/openai/deployments?api-version={version}"
+                    r = requests.get(url, headers=headers, timeout=15)
+                    return r
+                resp = _list_deployments(azure_endpoint, azure_api_version)
+                # Fallback to older preview version if resource returns 404 Resource not found
+                if resp.status_code == 404:
+                    try:
+                        data = resp.json()
+                        if isinstance(data, dict) and data.get("error", {}).get("message", "").lower().startswith("resource not found"):
+                            fallback_ver = "2024-02-15-preview"
+                            resp = _list_deployments(azure_endpoint, fallback_ver)
+                            if resp.status_code == 200:
+                                azure_api_version = fallback_ver
+                    except Exception:
+                        pass
+                # Whisper validation: ensure whisper API version defaults if only whisper resource is used
+                if not azure_deployment_transcribe and credentials.get("azure_endpoint_whisper") and not credentials.get("azure_api_version_whisper"):
+                    credentials["azure_api_version_whisper"] = "2024-02-01"
                 if resp.status_code != 200:
                     msg = f"Azure Transcribe validation failed ({resp.status_code})"
                     try:
                         data = resp.json()
                         if "error" in data:
                             m = data["error"].get("message") or str(data["error"]) 
-                            msg = f"Azure Transcribe validation failed: {m}"
+                            msg = f"Azure Transcribe validation failed: {m} (endpoint={azure_endpoint}, version={azure_api_version})"
                     except Exception:
                         pass
                     raise ValueError(msg)
-                if azure_deployment_gpt4o:
+                if azure_deployment_transcribe:
                     try:
                         data = resp.json()
                         deployments = data.get("data") or data.get("value") or []
                         names = {d.get("name") for d in deployments if isinstance(d, dict)}
-                        if azure_deployment_gpt4o not in names:
-                            raise ValueError(f"Azure GPT-4o deployment '{azure_deployment_gpt4o}' not found. Available: {sorted(list(names))}")
+                        if azure_deployment_transcribe not in names:
+                            raise ValueError(f"Azure Transcribe deployment '{azure_deployment_transcribe}' not found. Available: {sorted(list(names))}")
                     except Exception:
                         pass
             

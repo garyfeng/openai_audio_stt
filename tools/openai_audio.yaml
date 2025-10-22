@@ -17,7 +17,7 @@ parameters:
   - name: file
     type: file
     required: true
-    form: llm
+    form: form
     label:
       en_US: Audio File
       zh_Hans: 音频文件

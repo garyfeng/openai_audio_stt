@@ -1,7 +1,7 @@
 ## OpenAI Audio STT
 
-**Author:** lysonober
-**Version:** 0.0.4
+**Author:** garyfeng
+**Version:** 0.0.5
 **Type:** Tool
 
 ### Description
@@ -162,3 +162,19 @@ Notes:
 - You can set a per-call Azure deployment override in tool parameters if you have multiple deployments.
 
 This repository currently passes local testing (outside Dify) for issue #1, but in-situ plugin testing has not yet been performed.
+
+### Azure API versions and common errors
+
+- Many Azure resources do not support `2024-12-01-preview` for audio yet. If you encounter `404 Resource not found` on Azure GPT‑4o Transcribe, set:
+  - `azure_api_version_transcribe=2024-02-15-preview`
+- For Azure Whisper deployments, use:
+  - `azure_api_version_whisper=2024-02-01`
+- Translation requires a Whisper deployment. If `transcription_type=translate` on Azure, this plugin will force `model=whisper-1` and route to your Whisper endpoint/deployment. Ensure `azure_endpoint_whisper` and `azure_deployment_whisper` are configured.
+
+### Runtime fallback behavior (Azure)
+
+- If a transcription request to Azure with `api-version=2024-12-01-preview` returns 404 "Resource not found", the plugin will retry once with `2024-02-15-preview` automatically (Transcribe only). Prefer setting the correct version in provider configuration.
+
+### Dify form configuration notes
+
+- The file parameter uses `form: form` in the tool YAML so users can upload audio via the Workflow UI. LLM cannot provide file inputs, hence not `form: llm`.

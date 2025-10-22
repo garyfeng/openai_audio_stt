@@ -6,12 +6,17 @@ import requests
 import json
 import tempfile
 import pathlib
+import os
 
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 
 class OpenaiAudioTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        # Read a sane HTTP timeout from environment (connect, read)
+        DEFAULT_TIMEOUT = int(os.getenv("MAX_REQUEST_TIMEOUT", "120"))
+        HTTP_TIMEOUT = (10, DEFAULT_TIMEOUT)
+
         # Credentials
         api_key = self.runtime.credentials.get("api_key")
         azure_endpoint_transcribe = self.runtime.credentials.get("azure_endpoint_transcribe") or self.runtime.credentials.get("azure_endpoint")
@@ -29,9 +34,9 @@ class OpenaiAudioTool(Tool):
         # Multi-resource support: allow separate whisper credentials
         azure_api_key_whisper = self.runtime.credentials.get("azure_api_key_whisper")
         azure_endpoint_whisper = self.runtime.credentials.get("azure_endpoint_whisper")
-        azure_api_key = self.runtime.credentials.get("azure_api_key") or api_key
-        azure_api_version = self.runtime.credentials.get("azure_api_version", "2024-12-01-preview")
-        azure_api_version_whisper = self.runtime.credentials.get("azure_api_version_whisper")
+        azure_api_key = self.runtime.credentials.get("azure_api_key_transcribe") or self.runtime.credentials.get("azure_api_key") or api_key
+        azure_api_version = self.runtime.credentials.get("azure_api_version_transcribe") or self.runtime.credentials.get("azure_api_version") or "2024-12-01-preview"
+        azure_api_version_whisper = self.runtime.credentials.get("azure_api_version_whisper") or "2024-02-01"
         
         if not api_key and not (azure_endpoint or azure_endpoint_whisper):
             raise Exception("API key not found in credentials")
@@ -52,22 +57,44 @@ class OpenaiAudioTool(Tool):
         is_azure = bool(azure_endpoint)
         is_azure_whisper = bool(azure_endpoint_whisper)
         # Choose deployment intelligently if Azure
-        azure_deployment_gpt4o = self.runtime.credentials.get("azure_deployment_gpt4o")
+        azure_deployment_transcribe = self.runtime.credentials.get("azure_deployment_transcribe")
         azure_deployment_whisper = self.runtime.credentials.get("azure_deployment_whisper")
         selected_deployment = None
-        if is_azure:
+        
+        # Enforce Whisper for translation
+        if transcription_type == "translate":
+            # For OpenAI, translation only supports whisper-1
+            model = "whisper-1"
+            if is_azure:
+                # Force Whisper resource and deployment for Azure translate
+                if azure_endpoint_whisper:
+                    azure_endpoint = azure_endpoint_whisper
+                if azure_api_key_whisper:
+                    azure_api_key = azure_api_key_whisper
+                # Use whisper API version if provided
+                if azure_api_version_whisper:
+                    azure_api_version = azure_api_version_whisper
+                # Require whisper deployment
+                selected_deployment = azure_deployment_whisper
+                if not selected_deployment:
+                    raise Exception("Translation requires an Azure Whisper deployment (azure_deployment_whisper)")
+        
+        # If not translation, select deployment normally
+        if is_azure and transcription_type != "translate":
             if azure_deployment_override:
                 selected_deployment = azure_deployment_override
             else:
-                # If model hints whisper, pick whisper deployment; else pick gpt-4o
+                # If model hints whisper, pick whisper deployment; else pick transcribe
                 if model == "whisper-1" and azure_deployment_whisper:
                     selected_deployment = azure_deployment_whisper
-                elif azure_deployment_gpt4o:
-                    selected_deployment = azure_deployment_gpt4o
                 else:
-                    selected_deployment = self.runtime.credentials.get("azure_deployment")
+                    selected_deployment = (
+                        azure_deployment_transcribe
+                        or self.runtime.credentials.get("azure_deployment_gpt4o")  # legacy alias
+                        or self.runtime.credentials.get("azure_deployment")        # legacy generic
+                    )
             if not selected_deployment:
-                raise Exception("Azure deployment name is required (provide azure_deployment or set dedicated gpt4o/whisper deployment in credentials)")
+                raise Exception("Azure deployment name is required (provide azure_deployment_transcribe or set whisper/transcribe deployment in credentials)")
         
         # Build endpoint with API version; Whisper can have a different api-version
         def _build_azure_url(path_kind: str) -> str:
@@ -75,33 +102,27 @@ class OpenaiAudioTool(Tool):
             endpoint_to_use = azure_endpoint
             key_to_use = azure_api_key
             ver = azure_api_version
-            if model == "whisper-1":
-                if azure_endpoint_whisper:
-                    endpoint_to_use = azure_endpoint_whisper
-                if azure_api_key_whisper:
-                    key_to_use = azure_api_key_whisper
-                if azure_api_version_whisper:
-                    ver = azure_api_version_whisper
+            if model == "whisper-1" and transcription_type == "translate":
+                # Ensure using whisper-specific version if translating
+                ver = azure_api_version
             # Normalize endpoint again (defensive)
             endpoint = (endpoint_to_use or "").strip().rstrip('/')
             return f"{endpoint}/openai/deployments/{selected_deployment}/audio/{path_kind}?api-version={ver}"
         
+        # Determine path kind and endpoint
+        path_kind = "translations" if transcription_type == "translate" else "transcriptions"
+        
         if transcription_type == "translate":
             if not is_azure:
                 # OpenAI translate supports only whisper-1
-                if model != "whisper-1":
-                    model = "whisper-1"
                 api_endpoint = "https://api.openai.com/v1/audio/translations"
             else:
-                # Azure translate: must target Whisper deployment
-                if model != "whisper-1" and selected_deployment and "whisper" in selected_deployment:
-                    model = "whisper-1"
-                api_endpoint = _build_azure_url("translations")
+                api_endpoint = _build_azure_url(path_kind)
         else:
             if not is_azure:
                 api_endpoint = "https://api.openai.com/v1/audio/transcriptions"
             else:
-                api_endpoint = _build_azure_url("transcriptions")
+                api_endpoint = _build_azure_url(path_kind)
         
         # Enforce format constraints: Whisper-only advanced formats
         if model != "whisper-1":
@@ -144,8 +165,12 @@ class OpenaiAudioTool(Tool):
                     
                 if hasattr(file_data, "url"):
                     try:
-                        file_response = requests.get(file_data.url)
+                        file_response = requests.get(file_data.url, timeout=HTTP_TIMEOUT)
                         if file_response.status_code == 200:
+                            # Basic size guard (25MB) if content-length present
+                            cl = file_response.headers.get("Content-Length")
+                            if cl and int(cl) > 25 * 1024 * 1024:
+                                raise Exception("Audio file too large (>25MB)")
                             file_content = file_response.content
                         else:
                             raise Exception(f"Failed to download file from URL: {file_response.status_code}")
@@ -179,85 +204,105 @@ class OpenaiAudioTool(Tool):
                 
             file_ext = ".mp4"
             if file_name and '.' in file_name:
-                file_ext = file_name[file_name.rindex('.'):]  # Get everything after the last dot
+                file_ext = file_name[file_name.rindex('.'):]
             
-            with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
-                temp_file.write(file_content.encode() if isinstance(file_content, str) else file_content)
-                temp_file_path = temp_file.name
+            temp_file_path = None
             
-            # Build headers & data depending on provider
-            if is_azure:
-                # Choose appropriate key for whisper vs gpt-4o
-                use_key = azure_api_key
-                if model == "whisper-1" and azure_api_key_whisper:
-                    use_key = azure_api_key_whisper
-                headers = {"api-key": use_key}
-                request_data = {"response_format": response_format}
-            else:
-                headers = {"Authorization": f"Bearer {api_key}"}
-                request_data = {"model": model, "response_format": response_format}
-            
-            if prompt:
-                request_data["prompt"] = prompt
-            
-            if language:
-                request_data["language"] = language
-            
-            # Whisper-only timestamp granularities (works for OpenAI and Azure Whisper deployments)
-            if timestamp_granularities != "none" and (
-                (not is_azure and model == "whisper-1") or (is_azure and transcription_type != "translate")
-            ):
-                # For Whisper timestamps, response_format must be verbose_json
-                request_data["response_format"] = "verbose_json"
-                if timestamp_granularities == "segment":
-                    request_data["timestamp_granularities"] = ["segment"]
-                elif timestamp_granularities == "word":
-                    request_data["timestamp_granularities"] = ["word"]
-                elif timestamp_granularities == "segment_and_word":
-                    request_data["timestamp_granularities"] = ["segment", "word"]
-            
-            if stream:
-                request_data["stream"] = True
-            
-            files = {
-                "file": (file_name, open(temp_file_path, "rb"), file_type)
-            }
-            
-            if stream:
-                with requests.post(
-                    api_endpoint,
-                    headers=headers,
-                    data=request_data,
-                    files=files,
-                    stream=True
-                ) as response:
-                    if response.status_code != 200:
-                        raise Exception(f"Error {response.status_code}: {response.text}")
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
+                    temp_file.write(file_content.encode() if isinstance(file_content, str) else file_content)
+                    temp_file_path = temp_file.name
+                
+                # Build headers & data depending on provider
+                if is_azure:
+                    # Choose appropriate key for whisper vs gpt-4o
+                    use_key = azure_api_key
+                    if model == "whisper-1" and azure_api_key_whisper:
+                        use_key = azure_api_key_whisper
+                    headers = {"api-key": use_key}
+                    request_data = {"response_format": response_format}
+                else:
+                    headers = {"Authorization": f"Bearer {api_key}"}
+                    request_data = {"model": model, "response_format": response_format}
+                
+                if prompt:
+                    request_data["prompt"] = prompt
+                
+                if language:
+                    request_data["language"] = language
+                
+                # Whisper-only timestamp granularities (works for OpenAI and Azure Whisper deployments)
+                if timestamp_granularities != "none" and (
+                    (not is_azure and model == "whisper-1") or (is_azure and transcription_type != "translate")
+                ):
+                    # For Whisper timestamps, response_format must be verbose_json
+                    request_data["response_format"] = "verbose_json"
+                    if timestamp_granularities == "segment":
+                        request_data["timestamp_granularities"] = ["segment"]
+                    elif timestamp_granularities == "word":
+                        request_data["timestamp_granularities"] = ["word"]
+                    elif timestamp_granularities == "segment_and_word":
+                        request_data["timestamp_granularities"] = ["segment", "word"]
+                
+                if stream:
+                    request_data["stream"] = True
+                
+                # Helper to post with possible Azure fallback on 404 Resource not found
+                def _post_with_optional_fallback(url: str) -> requests.Response:
+                    with open(temp_file_path, "rb") as f:
+                        files = {"file": (file_name, f, file_type)}
+                        resp = requests.post(url, headers=headers, data=request_data, files=files, timeout=HTTP_TIMEOUT, stream=stream)
+                    if is_azure and resp.status_code == 404 and "Resource not found" in (resp.text or ""):
+                        # Try fallback for GPT-4o transcribe if using 2024-12-01-preview
+                        if transcription_type != "translate" and azure_api_version == "2024-12-01-preview":
+                            fallback_ver = "2024-02-15-preview"
+                            azure_api_version_nonlocal = fallback_ver
+                            # Update outer variable for subsequent logic
+                            # In Python, rebind the outer variable
+                            nonlocal azure_api_version
+                            azure_api_version = fallback_ver
+                            # Rebuild Azure endpoint
+                            fallback_url = _build_azure_url(path_kind)
+                            with open(temp_file_path, "rb") as f2:
+                                files2 = {"file": (file_name, f2, file_type)}
+                                resp = requests.post(fallback_url, headers=headers, data=request_data, files=files2, timeout=HTTP_TIMEOUT, stream=stream)
+                    return resp
+                
+                # Execute request
+                response = _post_with_optional_fallback(api_endpoint)
+                
+                if response.status_code != 200:
+                    # Improve error reporting
+                    err_text = response.text
+                    try:
+                        j = response.json()
+                        msg = j.get("error", {}).get("message") or j.get("message")
+                        if msg:
+                            err_text = msg
+                    except Exception:
+                        pass
+                    raise Exception(f"Error {response.status_code}: {err_text}")
                     
+                if stream:
                     buffer = ""
                     for line in response.iter_lines():
                         if line:
                             line_text = line.decode('utf-8')
-                            
                             if line_text.startswith('data: '):
                                 data = line_text[6:]
                                 if data == "[DONE]":
                                     break
-                                    
                                 try:
                                     json_data = json.loads(data)
-                                    
                                     if 'type' in json_data and json_data['type'] == 'transcript.text.delta':
                                         if 'delta' in json_data:
                                             text_chunk = json_data['delta']
                                             buffer += text_chunk
                                             yield self.create_text_message(text_chunk)
-                                    
                                     elif 'type' in json_data and json_data['type'] == 'transcript.text.done':
                                         if 'text' in json_data:
                                             buffer = json_data['text']
                                             yield self.create_text_message(buffer)
-                                    
                                     elif 'choices' in json_data and len(json_data['choices']) > 0:
                                         delta = json_data['choices'][0].get('delta', {})
                                         if 'text' in delta:
@@ -266,44 +311,32 @@ class OpenaiAudioTool(Tool):
                                             yield self.create_text_message(text_chunk)
                                 except json.JSONDecodeError:
                                     pass
-                    
                     if buffer and output_format in ["default", "json_only"]:
                         yield self.create_json_message({"result": {"text": buffer}})
-            else:
-                response = requests.post(
-                    api_endpoint,
-                    headers=headers,
-                    data=request_data,
-                    files=files
-                )
-                
-                if response.status_code != 200:
-                    raise Exception(f"Error {response.status_code}: {response.text}")
-                    
-                if response_format in ["json", "verbose_json"]:
-                    result = response.json()
                 else:
-                    result = {"text": response.text}
-                
-                if output_format == "json_only":
-                    yield self.create_json_message({"result": result})
-                elif output_format == "text_only":
-                    if isinstance(result, dict) and "text" in result:
-                        yield self.create_text_message(result["text"])
+                    if response_format in ["json", "verbose_json"]:
+                        result = response.json()
                     else:
-                        yield self.create_text_message(str(result))
-                else:
-                    yield self.create_json_message({"result": result})
-                    
-                    if isinstance(result, dict) and "text" in result:
-                        yield self.create_text_message(result["text"])
+                        result = {"text": response.text}
+                    if output_format == "json_only":
+                        yield self.create_json_message({"result": result})
+                    elif output_format == "text_only":
+                        if isinstance(result, dict) and "text" in result:
+                            yield self.create_text_message(result["text"])
+                        else:
+                            yield self.create_text_message(str(result))
                     else:
-                        yield self.create_text_message(str(result))
-            
-            try:
-                pathlib.Path(temp_file_path).unlink()
-            except Exception:
-                pass
+                        yield self.create_json_message({"result": result})
+                        if isinstance(result, dict) and "text" in result:
+                            yield self.create_text_message(result["text"])
+                        else:
+                            yield self.create_text_message(str(result))
+            finally:
+                if temp_file_path:
+                    try:
+                        pathlib.Path(temp_file_path).unlink()
+                    except Exception:
+                        pass
             
         except Exception as e:
             raise Exception(f"Exception while processing audio: {str(e)}")
