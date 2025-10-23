@@ -324,6 +324,41 @@ class OpenaiAudioTool(Tool):
                         result = response.json()
                     else:
                         result = {"text": response.text}
+
+                    # Azure Whisper translation fallback: if translate returns non-English text, try transcriptions with translate=true
+                    def _looks_non_english(txt: str) -> bool:
+                        if not txt:
+                            return False
+                        total = len(txt)
+                        non_ascii = sum(1 for ch in txt if ord(ch) > 127)
+                        # If more than 20% of chars are non-ASCII, likely not English
+                        return (non_ascii / max(total, 1)) > 0.2
+
+                    if transcription_type == "translate" and is_azure:
+                        # Extract text from result to assess language
+                        text_out = result.get("text") if isinstance(result, dict) else str(result)
+                        if _looks_non_english(str(text_out)):
+                            # Fallback to transcriptions with translate flag
+                            fallback_url = _build_azure_url("transcriptions")
+                            request_data_fallback = dict(request_data)
+                            request_data_fallback.pop("stream", None)
+                            request_data_fallback["translate"] = True
+                            with open(temp_file_path, "rb") as f3:
+                                files3 = {"file": (file_name, f3, file_type)}
+                                r3 = requests.post(
+                                    fallback_url,
+                                    headers=headers,
+                                    data=request_data_fallback,
+                                    files=files3,
+                                    timeout=HTTP_TIMEOUT,
+                                    stream=False,
+                                )
+                            if r3.status_code == 200:
+                                try:
+                                    result = r3.json() if response_format in ["json", "verbose_json"] else {"text": r3.text}
+                                except Exception:
+                                    result = {"text": r3.text}
+
                     if output_format == "json_only":
                         yield self.create_json_message({"result": result})
                     elif output_format == "text_only":
