@@ -87,6 +87,13 @@ class OpenaiAudioTool(Tool):
                 # If model hints whisper, pick whisper deployment; else pick transcribe
                 if model == "whisper-1" and azure_deployment_whisper:
                     selected_deployment = azure_deployment_whisper
+                    # Switch to whisper resource/key/version if provided
+                    if azure_endpoint_whisper:
+                        azure_endpoint = azure_endpoint_whisper
+                    if azure_api_key_whisper:
+                        azure_api_key = azure_api_key_whisper
+                    if azure_api_version_whisper:
+                        azure_api_version = azure_api_version_whisper
                 else:
                     selected_deployment = (
                         azure_deployment_transcribe
