@@ -1,2 +1,3 @@
-dify_plugin>=0.1.0,<0.2.0
-requests>=2.31.0
+# Runtime dependencies for the plugin. The Dify plugin runner provides the dify_plugin SDK.
+# Pin requests to a modern, stable range.
+requests>=2.31,<3
