@@ -178,3 +178,9 @@ This repository currently passes local testing (outside Dify) for issue #1, but 
 ### Dify form configuration notes
 
 - The file parameter uses `form: form` in the tool YAML so users can upload audio via the Workflow UI. LLM cannot provide file inputs, hence not `form: llm`.
+
+### Azure-specific guide
+
+For Azure configuration nuances, api-version differences between listing and audio endpoints, and the fallbacks implemented in this plugin, see:
+
+- readme_azure.md
