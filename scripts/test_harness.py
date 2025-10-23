@@ -70,7 +70,7 @@ def run(tool_params: dict, creds: dict, mock: bool = False):
                 return self
             def __exit__(self, *exc):
                 return False
-        def _fake_post(url, headers=None, data=None, files=None, stream=False):
+        def _fake_post(url, headers=None, data=None, files=None, stream=False, timeout=None):
             if stream:
                 return _Resp(stream=True)
             return _Resp()

@@ -1,7 +1,7 @@
 from collections.abc import Generator
 # ruff: noqa
 
-from typing import Any
+from typing import Any, Optional
 import requests
 import json
 import tempfile
@@ -97,7 +97,7 @@ class OpenaiAudioTool(Tool):
                 raise Exception("Azure deployment name is required (provide azure_deployment_transcribe or set whisper/transcribe deployment in credentials)")
         
         # Build endpoint with API version; Whisper can have a different api-version
-        def _build_azure_url(path_kind: str, version_override: str | None = None) -> str:
+        def _build_azure_url(path_kind: str, version_override: Optional[str] = None) -> str:
             # Decide endpoint & key based on model (whisper can be a separate resource)
             endpoint_to_use = azure_endpoint
             ver = version_override or azure_api_version
