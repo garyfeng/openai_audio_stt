@@ -1,2 +1,0 @@
-{"type": "json", "data": {"result": {"text": "Hello world, this is a test of transcription with Azure OpenAI.", "usage": {"type": "tokens", "total_tokens": 55, "input_tokens": 39, "input_token_details": {"text_tokens": 0, "audio_tokens": 39}, "output_tokens": 16}}}}
-{"type": "text", "text": "Hello world, this is a test of transcription with Azure OpenAI."}
