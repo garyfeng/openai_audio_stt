@@ -97,14 +97,10 @@ class OpenaiAudioTool(Tool):
                 raise Exception("Azure deployment name is required (provide azure_deployment_transcribe or set whisper/transcribe deployment in credentials)")
         
         # Build endpoint with API version; Whisper can have a different api-version
-        def _build_azure_url(path_kind: str) -> str:
+        def _build_azure_url(path_kind: str, version_override: str | None = None) -> str:
             # Decide endpoint & key based on model (whisper can be a separate resource)
             endpoint_to_use = azure_endpoint
-            key_to_use = azure_api_key
-            ver = azure_api_version
-            if model == "whisper-1" and transcription_type == "translate":
-                # Ensure using whisper-specific version if translating
-                ver = azure_api_version
+            ver = version_override or azure_api_version
             # Normalize endpoint again (defensive)
             endpoint = (endpoint_to_use or "").strip().rstrip('/')
             return f"{endpoint}/openai/deployments/{selected_deployment}/audio/{path_kind}?api-version={ver}"
@@ -256,13 +252,8 @@ class OpenaiAudioTool(Tool):
                         # Try fallback for GPT-4o transcribe if using 2024-12-01-preview
                         if transcription_type != "translate" and azure_api_version == "2024-12-01-preview":
                             fallback_ver = "2024-02-15-preview"
-                            azure_api_version_nonlocal = fallback_ver
-                            # Update outer variable for subsequent logic
-                            # In Python, rebind the outer variable
-                            nonlocal azure_api_version
-                            azure_api_version = fallback_ver
-                            # Rebuild Azure endpoint
-                            fallback_url = _build_azure_url(path_kind)
+                            # Rebuild Azure endpoint with explicit override, do not use nonlocal
+                            fallback_url = _build_azure_url(path_kind, version_override=fallback_ver)
                             with open(temp_file_path, "rb") as f2:
                                 files2 = {"file": (file_name, f2, file_type)}
                                 resp = requests.post(fallback_url, headers=headers, data=request_data, files=files2, timeout=HTTP_TIMEOUT, stream=stream)
