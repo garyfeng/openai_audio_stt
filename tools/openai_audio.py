@@ -255,15 +255,23 @@ class OpenaiAudioTool(Tool):
                     with open(temp_file_path, "rb") as f:
                         files = {"file": (file_name, f, file_type)}
                         resp = requests.post(url, headers=headers, data=request_data, files=files, timeout=HTTP_TIMEOUT, stream=stream)
-                    if is_azure and resp.status_code == 404 and "Resource not found" in (resp.text or ""):
-                        # Try fallback for GPT-4o transcribe if using 2024-12-01-preview
-                        if transcription_type != "translate" and azure_api_version == "2024-12-01-preview":
-                            fallback_ver = "2024-02-15-preview"
-                            # Rebuild Azure endpoint with explicit override, do not use nonlocal
-                            fallback_url = _build_azure_url(path_kind, version_override=fallback_ver)
-                            with open(temp_file_path, "rb") as f2:
-                                files2 = {"file": (file_name, f2, file_type)}
-                                resp = requests.post(fallback_url, headers=headers, data=request_data, files=files2, timeout=HTTP_TIMEOUT, stream=stream)
+                    if is_azure and resp.status_code == 404:
+                        # Try fallback versions for Transcribe when Azure returns 404, regardless of initial version
+                        if transcription_type != "translate":
+                            fallback_candidates = [
+                                "2024-02-15-preview",
+                                "2024-12-01-preview",
+                            ]
+                            for fv in fallback_candidates:
+                                if fv == azure_api_version:
+                                    continue
+                                fallback_url = _build_azure_url(path_kind, version_override=fv)
+                                with open(temp_file_path, "rb") as f2:
+                                    files2 = {"file": (file_name, f2, file_type)}
+                                    r2 = requests.post(fallback_url, headers=headers, data=request_data, files=files2, timeout=HTTP_TIMEOUT, stream=stream)
+                                    if r2.status_code == 200:
+                                        resp = r2
+                                        break
                     return resp
                 
                 # Execute request

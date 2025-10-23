@@ -81,6 +81,16 @@ class OpenaiAudioProvider(ToolProvider):
                 headers = {"api-key": whisper_api_key}
                 url = f"{whisper_endpoint}/openai/deployments?api-version={whisper_api_version}"
                 resp = requests.get(url, headers=headers, timeout=15)
+                # Allow 404 fallback for older deployments listing APIs
+                if resp.status_code == 404:
+                    for fv in ["2024-02-01", "2024-02-15-preview", "2023-03-15-preview"]:
+                        if fv == whisper_api_version:
+                            continue
+                        r2 = requests.get(f"{whisper_endpoint}/openai/deployments?api-version={fv}", headers=headers, timeout=15)
+                        if r2.status_code == 200:
+                            resp = r2
+                            whisper_api_version = fv
+                            break
                 if resp.status_code != 200:
                     msg = f"Azure Whisper validation failed ({resp.status_code})"
                     try:
