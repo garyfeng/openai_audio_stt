@@ -65,19 +65,20 @@ class OpenaiAudioTool(Tool):
         if transcription_type == "translate":
             # For OpenAI, translation only supports whisper-1
             model = "whisper-1"
-            if is_azure:
-                # Force Whisper resource and deployment for Azure translate
-                if azure_endpoint_whisper:
-                    azure_endpoint = azure_endpoint_whisper
-                if azure_api_key_whisper:
-                    azure_api_key = azure_api_key_whisper
-                # Use whisper API version if provided
-                if azure_api_version_whisper:
-                    azure_api_version = azure_api_version_whisper
-                # Require whisper deployment
-                selected_deployment = azure_deployment_whisper
-                if not selected_deployment:
-                    raise Exception("Translation requires an Azure Whisper deployment (azure_deployment_whisper)")
+            # Force Whisper resource and deployment for Azure translate if available
+            if azure_endpoint_whisper:
+                azure_endpoint = azure_endpoint_whisper
+            if azure_api_key_whisper:
+                azure_api_key = azure_api_key_whisper
+            # Use whisper API version if provided
+            if azure_api_version_whisper:
+                azure_api_version = azure_api_version_whisper
+            # Require whisper deployment
+            selected_deployment = azure_deployment_whisper
+            if not selected_deployment:
+                raise Exception("Translation requires an Azure Whisper deployment (azure_deployment_whisper)")
+            # Recompute Azure effective flag after endpoint override
+            is_azure = bool(azure_endpoint)
         
         # If not translation, select deployment normally
         if is_azure and transcription_type != "translate":
@@ -323,7 +324,15 @@ class OpenaiAudioTool(Tool):
                     if response_format in ["json", "verbose_json"]:
                         result = response.json()
                     else:
-                        result = {"text": response.text}
+                        # Try to parse JSON for 'text' even when response_format==text (translations return JSON)
+                        try:
+                            j = response.json()
+                            if isinstance(j, dict) and "text" in j:
+                                result = {"text": j["text"]}
+                            else:
+                                result = j
+                        except Exception:
+                            result = {"text": response.text}
 
                     # Azure Whisper translation fallback: if translate returns non-English text, try transcriptions with translate=true
                     def _looks_non_english(txt: str) -> bool:
@@ -355,7 +364,11 @@ class OpenaiAudioTool(Tool):
                                 )
                             if r3.status_code == 200:
                                 try:
-                                    result = r3.json() if response_format in ["json", "verbose_json"] else {"text": r3.text}
+                                    j2 = r3.json()
+                                    if isinstance(j2, dict) and "text" in j2:
+                                        result = {"text": j2["text"]}
+                                    else:
+                                        result = j2
                                 except Exception:
                                     result = {"text": r3.text}
 

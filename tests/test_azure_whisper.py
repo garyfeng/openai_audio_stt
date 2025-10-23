@@ -21,7 +21,7 @@ def test_whisper_transcribe_verbose_json(make_tool, monkeypatch):
                         {"id": 1, "start": 1.0, "end": 2.0, "text": "world"},
                     ]
                 }
-            text = json.dumps({"segments": []})
+            text = "{}"
         return Resp()
 
     monkeypatch.setattr(requests, "post", fake_post)
