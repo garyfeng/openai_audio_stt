@@ -11,9 +11,11 @@ __pycache__/
 # Env
 .env
 .env.*
+.difyignore
 
 # Build
 /dist/
 *.zip
 /samples/
-/results/
+results/
+.pytest_cache/
