@@ -21,34 +21,51 @@ class OpenaiAudioProvider(ToolProvider):
                 return ep
             
             # Validate Azure Transcribe (GPT-4o) if configured
-            azure_endpoint = _norm(credentials.get("azure_endpoint")) or _norm(credentials.get("azure_openai_transcribe_endpoint"))
-            azure_api_key = credentials.get("azure_api_key") or credentials.get("azure_openai_transcribe_api_key") or credentials.get("api_key")
-            azure_api_version = credentials.get("azure_api_version", credentials.get("azure_openai_transcribe_api_version", "2024-12-01-preview"))
-            azure_deployment_gpt4o = credentials.get("azure_deployment_gpt4o") or credentials.get("azure_openai_transcribe_deployment") or credentials.get("azure_deployment")
+            azure_endpoint = _norm(credentials.get("azure_endpoint_transcribe")) or _norm(credentials.get("azure_endpoint")) or _norm(credentials.get("azure_openai_transcribe_endpoint"))
+            azure_api_key = credentials.get("azure_api_key_transcribe") or credentials.get("azure_api_key") or credentials.get("azure_openai_transcribe_api_key") or credentials.get("api_key")
+            azure_api_version = credentials.get("azure_api_version_transcribe") or credentials.get("azure_api_version") or credentials.get("azure_openai_transcribe_api_version") or "2024-12-01-preview"
+            azure_deployment_transcribe = credentials.get("azure_deployment_transcribe") or credentials.get("azure_deployment_gpt4o") or credentials.get("azure_openai_transcribe_deployment") or credentials.get("azure_deployment")
             
             if azure_endpoint:
                 if not azure_api_key:
                     raise ValueError("Azure Transcribe API key is required when azure_endpoint is set")
                 headers = {"api-key": azure_api_key}
-                url = f"{azure_endpoint}/openai/deployments?api-version={azure_api_version}"
-                resp = requests.get(url, headers=headers, timeout=15)
+                def _list_deployments(endpoint: str, version: str):
+                    url = f"{endpoint}/openai/deployments?api-version={version}"
+                    r = requests.get(url, headers=headers, timeout=15)
+                    return r
+                resp = _list_deployments(azure_endpoint, azure_api_version)
+                # Fallback to older preview version if resource returns 404 Resource not found
+                if resp.status_code == 404:
+                    try:
+                        data = resp.json()
+                        if isinstance(data, dict) and data.get("error", {}).get("message", "").lower().startswith("resource not found"):
+                            fallback_ver = "2024-02-15-preview"
+                            resp = _list_deployments(azure_endpoint, fallback_ver)
+                            if resp.status_code == 200:
+                                azure_api_version = fallback_ver
+                    except Exception:
+                        pass
+                # Whisper validation: ensure whisper API version defaults if only whisper resource is used
+                if not azure_deployment_transcribe and credentials.get("azure_endpoint_whisper") and not credentials.get("azure_api_version_whisper"):
+                    credentials["azure_api_version_whisper"] = "2024-02-01"
                 if resp.status_code != 200:
                     msg = f"Azure Transcribe validation failed ({resp.status_code})"
                     try:
                         data = resp.json()
                         if "error" in data:
                             m = data["error"].get("message") or str(data["error"]) 
-                            msg = f"Azure Transcribe validation failed: {m}"
+                            msg = f"Azure Transcribe validation failed: {m} (endpoint={azure_endpoint}, version={azure_api_version})"
                     except Exception:
                         pass
                     raise ValueError(msg)
-                if azure_deployment_gpt4o:
+                if azure_deployment_transcribe:
                     try:
                         data = resp.json()
                         deployments = data.get("data") or data.get("value") or []
                         names = {d.get("name") for d in deployments if isinstance(d, dict)}
-                        if azure_deployment_gpt4o not in names:
-                            raise ValueError(f"Azure GPT-4o deployment '{azure_deployment_gpt4o}' not found. Available: {sorted(list(names))}")
+                        if azure_deployment_transcribe not in names:
+                            raise ValueError(f"Azure Transcribe deployment '{azure_deployment_transcribe}' not found. Available: {sorted(list(names))}")
                     except Exception:
                         pass
             
@@ -64,6 +81,16 @@ class OpenaiAudioProvider(ToolProvider):
                 headers = {"api-key": whisper_api_key}
                 url = f"{whisper_endpoint}/openai/deployments?api-version={whisper_api_version}"
                 resp = requests.get(url, headers=headers, timeout=15)
+                # Allow 404 fallback for older deployments listing APIs
+                if resp.status_code == 404:
+                    for fv in ["2024-02-01", "2024-02-15-preview", "2023-03-15-preview"]:
+                        if fv == whisper_api_version:
+                            continue
+                        r2 = requests.get(f"{whisper_endpoint}/openai/deployments?api-version={fv}", headers=headers, timeout=15)
+                        if r2.status_code == 200:
+                            resp = r2
+                            whisper_api_version = fv
+                            break
                 if resp.status_code != 200:
                     msg = f"Azure Whisper validation failed ({resp.status_code})"
                     try:
@@ -87,18 +114,18 @@ class OpenaiAudioProvider(ToolProvider):
             # Fallback: OpenAI key validation (if Azure not set at all)
             if not azure_endpoint and not whisper_endpoint:
                 api_key = credentials.get("api_key")
-                if not api_key:
-                    raise ValueError("API key is required")
-                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=15)
-                if response.status_code != 200:
-                    error_message = f"API key validation failed with status code: {response.status_code}"
-                    try:
-                        error_data = response.json()
-                        if "error" in error_data and "message" in error_data["error"]:
-                            error_message = f"API key validation failed: {error_data['error']['message']}"
-                    except Exception:
-                        pass
-                    raise ValueError(error_message)
+                if api_key:
+                    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                    response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=15)
+                    if response.status_code != 200:
+                        error_message = f"API key validation failed with status code: {response.status_code}"
+                        try:
+                            error_data = response.json()
+                            if "error" in error_data and "message" in error_data["error"]:
+                                error_message = f"API key validation failed: {error_data['error']['message']}"
+                        except Exception:
+                            pass
+                        raise ValueError(error_message)
+                # If neither Azure nor OpenAI is provided, allow save; tool will error at invoke time if needed
         except Exception as e:
             raise ToolProviderCredentialValidationError(str(e))

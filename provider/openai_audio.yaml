@@ -7,162 +7,105 @@ identity:
     pt_BR: OpenAI Audio STT
     ja_JP: OpenAI Audio STT
   description:
-    en_US: Convert audio to text with OpenAI's Audio API, supporting transcription and translation across multiple languages with high accuracy. Supports Whisper-1 model as well as GPT-4o Transcribe and GPT-4o Mini Transcribe models with streaming output capability.
-    zh_Hans: 使用 OpenAI 的 Audio API 将音频转换为文本，支持多种语言的高精度转录和翻译。支持 Whisper-1 模型以及具有流式输出能力的 GPT-4o Transcribe 和 GPT-4o Mini Transcribe 模型。
-    pt_BR: Converta áudio em texto com a API de Áudio da OpenAI, suportando transcrição e tradução em vários idiomas com alta precisão. Suporta o modelo Whisper-1, bem como os modelos GPT-4o Transcribe e GPT-4o Mini Transcribe com capacidade de saída em streaming.
-    ja_JP: OpenAIのAudio APIを使用して音声をテキストに変換し、複数言語での高精度な文字起こしと翻訳をサポートします。Whisper-1モデルに加え、ストリーミング出力機能を備えたGPT-4o TranscribeおよびGPT-4o Mini Transcribeモデルもサポートしています。
+    en_US: Convert audio to text with OpenAI's Audio API, supporting transcription and translation across multiple languages with high accuracy. Supports Whisper-1 model as well as Transcribe models with streaming output capability.
+    zh_Hans: 使用 OpenAI 的 Audio API 将音频转换为文本，支持多语言的高精度转录与翻译。支持 Whisper-1 模型以及具备流式输出能力的 Transcribe 模型。
+    pt_BR: Converta áudio em texto com a API de Áudio da OpenAI, com suporte a transcrição e tradução em vários idiomas com alta precisão. Suporta o modelo Whisper-1 e modelos de Transcrição com saída em streaming.
+    ja_JP: OpenAIのAudio APIを使用して音声をテキストに変換し、多言語での高精度な文字起こしおよび翻訳に対応します。Whisper-1モデルおよびストリーミングに対応したTranscribeモデルをサポートします。
   icon: icon.svg
 credentials_for_provider:
+  # OpenAI
   api_key:
     type: secret-input
-    required: true
+    required: false
     label:
-      en_US: API Key
-      zh_Hans: API 密钥
-      pt_BR: Chave API
-      ja_JP: API キー
+      en_US: OpenAI API Key
+      zh_Hans: OpenAI API 密钥
+      pt_BR: Chave API da OpenAI
+      ja_JP: OpenAI API キー
     placeholder:
       en_US: Please input your OpenAI API key
-      zh_Hans: 请输入您的 OpenAI API 密钥
-      pt_BR: Por favor, insira sua chave API da OpenAI
-      ja_JP: OpenAI API キーを入力してください
     help:
       en_US: Your OpenAI API key. You can find it in your OpenAI account settings.
-      zh_Hans: 您的 OpenAI API 密钥。您可以在 OpenAI 账户设置中找到它。
-      pt_BR: Sua chave API da OpenAI. Você pode encontrá-la nas configurações da sua conta OpenAI.
-      ja_JP: あなたのOpenAI APIキーです。OpenAIアカウント設定で確認できます。
     url: https://platform.openai.com/api-keys
-  azure_api_key:
+
+  # Azure Transcribe (separate resource allowed)
+  azure_endpoint_transcribe:
+    type: text-input
+    required: false
+    label:
+      en_US: Azure Transcribe Endpoint
+    placeholder:
+      en_US: https://<your-transcribe-resource>.openai.azure.com
+    help:
+      en_US: Base URL for your Azure OpenAI resource used for Transcribe.
+  azure_api_key_transcribe:
     type: secret-input
     required: false
     label:
-      en_US: Azure API Key
-      zh_Hans: Azure API 密钥
-      pt_BR: Chave API do Azure
-      ja_JP: Azure API キー
+      en_US: Azure Transcribe API Key
     placeholder:
-      en_US: Please input your Azure OpenAI API key
-      zh_Hans: 请输入您的 Azure OpenAI API 密钥
-      pt_BR: Por favor, insira sua chave API do Azure OpenAI
-      ja_JP: Azure OpenAI API キーを入力してください
+      en_US: Please input your Azure Transcribe API key
     help:
-      en_US: Your Azure OpenAI API key. You can find it in the Azure portal for your OpenAI resource.
-      zh_Hans: 您的 Azure OpenAI API 密钥。可在 Azure 门户的 OpenAI 资源中找到。
-      pt_BR: Sua chave API do Azure OpenAI. Você pode encontrá-la no portal do Azure para seu recurso OpenAI.
-      ja_JP: Azure ポータルの OpenAI リソースで確認できます。
-  azure_endpoint:
+      en_US: API key for the Transcribe resource (in Azure portal for this resource).
+  azure_api_version_transcribe:
     type: text-input
     required: false
     label:
-      en_US: Azure Endpoint
-      zh_Hans: Azure 终结点
-      pt_BR: Endpoint do Azure
-      ja_JP: Azure エンドポイント
+      en_US: Azure Transcribe API Version
     placeholder:
-      en_US: https://<your-resource>.openai.azure.com
-      zh_Hans: https://<your-resource>.openai.azure.com
-      pt_BR: https://<seu-recurso>.openai.azure.com
-      ja_JP: https://<your-resource>.openai.azure.com
+      en_US: "2024-12-01-preview"
     help:
-      en_US: The base URL of your Azure OpenAI resource (Transcribe/GPT-4o). If Whisper is on a separate resource, fill the Whisper fields below.
-      zh_Hans: 您的 Azure OpenAI 资源（Transcribe/GPT-4o）的基础 URL。如果 Whisper 位于另一个资源，请填写下方 Whisper 字段。
-      pt_BR: A URL base do seu recurso Azure OpenAI (Transcribe/GPT-4o). Se o Whisper estiver em um recurso separado, preencha os campos Whisper abaixo.
-      ja_JP: Azure OpenAI リソース（Transcribe/GPT-4o）のベース URL。Whisper が別のリソースにある場合は、下の Whisper 項目を入力してください。
-  azure_deployment:
+      en_US: API version for the Transcribe resource. Default is 2024-12-01-preview.
+  azure_deployment_transcribe:
     type: text-input
     required: false
     label:
-      en_US: Azure Deployment Name
-      zh_Hans: Azure 部署名称
-      pt_BR: Nome da Implantação do Azure
-      ja_JP: Azure デプロイ名
+      en_US: Azure Transcribe Deployment Name
     placeholder:
-      en_US: e.g., gpt-4o-transcribe or whisper-1
-      zh_Hans: 例如，gpt-4o-transcribe 或 whisper-1
-      pt_BR: ex., gpt-4o-transcribe ou whisper-1
-      ja_JP: 例: gpt-4o-transcribe または whisper-1
+      en_US: e.g., gpt-4o-transcribe
     help:
-      en_US: The deployment name you configured in Azure (not necessarily the same as the model name).
-      zh_Hans: 您在 Azure 中配置的部署名称（不一定与模型名称相同）。
-      pt_BR: O nome da implantação configurado no Azure (não necessariamente igual ao nome do modelo).
-      ja_JP: Azure で構成したデプロイ名（モデル名と同じとは限りません）。
-  azure_api_version:
-    type: text-input
-    required: false
-    label:
-      en_US: Azure API Version
-      zh_Hans: Azure API 版本
-      pt_BR: Versão da API do Azure
-      ja_JP: Azure API バージョン
-    placeholder:
-      en_US: 2024-12-01-preview
-    help:
-      en_US: The API version for your Azure OpenAI resource. Default is 2024-12-01-preview.
-      zh_Hans: Azure OpenAI 资源的 API 版本。默认值为 2024-12-01-preview。
-      pt_BR: A versão da API para o seu recurso Azure OpenAI. O padrão é 2024-12-01-preview。
-      ja_JP: Azure OpenAI リソースの API バージョン。デフォルトは 2024-12-01-preview です。
-tools:
-  - tools/openai_audio.yaml
-extra:
-  python:
-    source: provider/openai_audio.py
-  azure_api_key_whisper:
-    type: secret-input
-    required: false
-    label:
-      en_US: Azure Whisper API Key
-      zh_Hans: Azure Whisper API 密钥
-      pt_BR: Chave API do Azure Whisper
-      ja_JP: Azure Whisper API キー
-    placeholder:
-      en_US: Please input your Azure Whisper API key
-    help:
-      en_US: Azure API key for the Whisper resource (optional if using same resource).
+      en_US: Deployment name you configured in Azure for Transcribe.
+
+  # Azure Whisper (separate resource allowed)
   azure_endpoint_whisper:
     type: text-input
     required: false
     label:
       en_US: Azure Whisper Endpoint
-      zh_Hans: Azure Whisper 终结点
-      pt_BR: Endpoint do Azure Whisper
-      ja_JP: Azure Whisper エンドポイント
     placeholder:
       en_US: https://<your-whisper-resource>.openai.azure.com
     help:
       en_US: Base URL for the Azure OpenAI Whisper resource.
-  azure_deployment_whisper:
-    type: text-input
+  azure_api_key_whisper:
+    type: secret-input
     required: false
     label:
-      en_US: Azure Whisper Deployment Name
-      zh_Hans: Azure Whisper 部署名称
-      pt_BR: Nome da Implantação do Azure Whisper
-      ja_JP: Azure Whisper デプロイ名
+      en_US: Azure Whisper API Key
     placeholder:
-      en_US: e.g., whisper-1 or your-deployment-name
+      en_US: Please input your Azure Whisper API key
     help:
-      en_US: The deployment name configured for Whisper in Azure.
+      en_US: API key for the Whisper resource (optional if using same resource).
   azure_api_version_whisper:
     type: text-input
     required: false
     label:
       en_US: Azure Whisper API Version
-      zh_Hans: Azure Whisper API 版本
-      pt_BR: Versão da API do Azure Whisper
-      ja_JP: Azure Whisper API バージョン
     placeholder:
-      en_US: 2024-02-01
+      en_US: "2024-02-01"
     help:
       en_US: API version for the Whisper resource. Defaults to 2024-02-01 if unspecified.
-  azure_deployment_gpt4o:
+  azure_deployment_whisper:
     type: text-input
     required: false
     label:
-      en_US: Azure GPT-4o Deployment Name
-      zh_Hans: Azure GPT-4o 部署名称
-      pt_BR: Nome da Implantação Azure GPT-4o
-      ja_JP: Azure GPT-4o デプロイ名
+      en_US: Azure Whisper Deployment Name
     placeholder:
-      en_US: e.g., gpt-4o-transcribe
+      en_US: e.g., aidev-whisper-01
     help:
-      en_US: Deployment name configured in Azure for GPT-4o Transcribe.
+      en_US: Deployment name you configured in Azure for Whisper.
+
+tools:
+  - tools/openai_audio.yaml
+extra:
+  python:
+    source: provider/openai_audio.py

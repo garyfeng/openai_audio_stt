@@ -1,7 +1,7 @@
-version: 0.0.4
+version: 0.0.5
 type: plugin
-author: lysonober
-name: openai_audio
+author: garyfeng
+name: openai_audio_garyfeng
 label:
   en_US: openai_audio
   ja_JP: openai_audio
@@ -19,19 +19,13 @@ resource:
     tool:
       enabled: true
     model:
-      enabled: true
-      llm: true
-      text_embedding: true
-      rerank: true
-      tts: true
-      speech2text: true
-      moderation: true
+      enabled: false
     endpoint:
-      enabled: true
+      enabled: false
     app:
-      enabled: true
+      enabled: false
     storage:
-      enabled: true
+      enabled: false
       size: 1048576
 plugins:
   tools:

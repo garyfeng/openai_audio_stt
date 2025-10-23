@@ -70,7 +70,7 @@ def run(tool_params: dict, creds: dict, mock: bool = False):
                 return self
             def __exit__(self, *exc):
                 return False
-        def _fake_post(url, headers=None, data=None, files=None, stream=False):
+        def _fake_post(url, headers=None, data=None, files=None, stream=False, timeout=None):
             if stream:
                 return _Resp(stream=True)
             return _Resp()
@@ -79,7 +79,13 @@ def run(tool_params: dict, creds: dict, mock: bool = False):
             class _G:
                 status_code = 200
                 def json(self):
-                    return {"data": [{"name": creds.get("azure_deployment", "gpt-4o-transcribe")}]} 
+                    dep = (
+                        creds.get("azure_deployment_transcribe")
+                        or creds.get("azure_deployment_gpt4o")
+                        or creds.get("azure_deployment")
+                        or "gpt-4o-transcribe"
+                    )
+                    return {"data": [{"name": dep}]} 
             return _G()
         requests.get = _fake_get  # type: ignore
 
@@ -113,14 +119,15 @@ def load_env_credentials():
     if "OPENAI_API_KEY" in creds:
         mapped["api_key"] = creds["OPENAI_API_KEY"]
     # Azure TRANSCRIBE resource
+    # Map to new transcribe-specific keys
     if "AZURE_OPENAI_TRANSCRIBE_API_KEY" in creds:
-        mapped["azure_api_key"] = creds["AZURE_OPENAI_TRANSCRIBE_API_KEY"]
+        mapped["azure_api_key_transcribe"] = creds["AZURE_OPENAI_TRANSCRIBE_API_KEY"]
     if "AZURE_OPENAI_TRANSCRIBE_ENDPOINT" in creds:
-        mapped["azure_endpoint"] = creds["AZURE_OPENAI_TRANSCRIBE_ENDPOINT"]
+        mapped["azure_endpoint_transcribe"] = creds["AZURE_OPENAI_TRANSCRIBE_ENDPOINT"]
     if "AZURE_OPENAI_TRANSCRIBE_API_VERSION" in creds:
-        mapped["azure_api_version"] = creds["AZURE_OPENAI_TRANSCRIBE_API_VERSION"]
+        mapped["azure_api_version_transcribe"] = creds["AZURE_OPENAI_TRANSCRIBE_API_VERSION"]
     if "AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT" in creds:
-        mapped["azure_deployment_gpt4o"] = creds["AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT"]
+        mapped["azure_deployment_transcribe"] = creds["AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT"]
 
     # Azure WHISPER resource
     if "AZURE_OPENAI_WHISPER_API_KEY" in creds:
